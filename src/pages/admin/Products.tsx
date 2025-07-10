@@ -1,181 +1,267 @@
+// src/pages/Products.tsx
+import { useState, useEffect } from 'react'
+import {
+  listProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  Product,
+  ProductPayload,
+  ProductsListData,
+} from '@/services/products/productsApi'
+import DataTable from '@/components/DataTable'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import WysiwygEditor from '@/components/WysiwygEditor'
+import { toast } from '@/hooks/use-toast'
 
-import { useState } from 'react';
-import { useDataStore, Product } from '@/store/dataStore';
-import DataTable from '@/components/DataTable';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+const Spinner = () => (
+  <div
+    className="w-6 h-6 border-4 border-gray-200 border-t-gray-500 rounded-full animate-spin"
+    aria-label="Loading"
+  />
+)
 
-const Products = () => {
-  const { products, productCategories, addItem, updateItem, deleteItem } = useDataStore();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Product | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    categoryId: '',
-    image: '',
-    pdfDatasheet: '',
-    description: ''
-  });
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+
+export default function Products() {
+  // table + pagination/filter state
+  const [products, setProducts] = useState<Product[]>([])
+  const [filterOptions, setFilterOptions] = useState<{
+    types: string[]
+    applications: string[]
+  }>({ types: [], applications: [] })
+  const [meta, setMeta] = useState<{
+    page: number
+    total: number
+    pageSize: number
+  }>({ page: 1, total: 0, pageSize: 10 })
+
+  const [typeFilter, setTypeFilter] = useState<string[]>([])
+  const [appFilter, setAppFilter] = useState<string[]>([])
+
+  const [isTableLoading, setTableLoading] = useState(false)
+
+  // dialog/form state
+  const [isDialogOpen, setDialogOpen] = useState(false)
+  const [isSubmitting, setSubmitting] = useState(false)
+  const [editingItem, setEditingItem] = useState<Product | null>(null)
+  const [formData, setFormData] = useState<ProductPayload>({
+    code: '',
+    application: '',
+    performanceFeature: '',
+    type: '',
+  })
 
   const columns = [
-    { key: 'name' as keyof Product, label: 'Name' },
-    { 
-      key: 'categoryId' as keyof Product, 
-      label: 'Category',
-      render: (value: string) => {
-        const category = productCategories.find(c => c.id === value);
-        return category?.name || 'Unknown';
-      }
+    { key: 'id' as const, label: 'ID' },
+    { key: 'code' as const, label: 'Code' },
+    { key: 'application' as const, label: 'Application' },
+    { key: 'performanceFeature' as const, label: 'Feature' },
+    { key: 'type' as const, label: 'Type' },
+    {
+      key: 'createdAt' as const,
+      label: 'Created At',
+      render: (v: string) => formatDateTime(v),
     },
-    { 
-      key: 'image' as keyof Product, 
-      label: 'Image',
-      render: (value: string) => (
-        <img src={value} alt="Product" className="w-16 h-10 object-cover rounded" />
-      )
+    {
+      key: 'updatedAt' as const,
+      label: 'Updated At',
+      render: (v: string) => formatDateTime(v),
     },
-    { key: 'description' as keyof Product, label: 'Description' },
-  ];
+  ]
 
-  const handleAdd = () => {
-    setEditingItem(null);
-    setFormData({
-      name: '',
-      categoryId: '',
-      image: '',
-      pdfDatasheet: '',
-      description: ''
-    });
-    setIsDialogOpen(true);
-  };
+  useEffect(() => {
+    fetchProducts()
+  }, [meta.page, typeFilter, appFilter])
 
-  const handleEdit = (item: Product) => {
-    setEditingItem(item);
-    setFormData({
-      name: item.name,
-      categoryId: item.categoryId,
-      image: item.image,
-      pdfDatasheet: item.pdfDatasheet,
-      description: item.description
-    });
-    setIsDialogOpen(true);
-  };
+  async function fetchProducts() {
+    setTableLoading(true)
+    const res = await listProducts(
+      { type: typeFilter, application: appFilter },
+      meta.page
+    )
+    setTableLoading(false)
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      deleteItem('products', id);
-      toast({ title: 'Product deleted successfully' });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingItem) {
-      updateItem('products', editingItem.id, formData);
-      toast({ title: 'Product updated successfully' });
+    if (res.success) {
+      const d = res.data as ProductsListData
+      setProducts(d.data)
+      setFilterOptions(d.filter_feature)
+      setMeta(d.meta)
     } else {
-      addItem('products', formData);
-      toast({ title: 'Product created successfully' });
+      toast({ title: res.message, variant: 'destructive' })
     }
-    
-    setIsDialogOpen(false);
-  };
+  }
+
+  function openAddDialog() {
+    setEditingItem(null)
+    setFormData({ code: '', application: '', performanceFeature: '', type: '' })
+    setDialogOpen(true)
+  }
+
+  function openEditDialog(item: Product) {
+    setEditingItem(item)
+    setFormData({
+      code: item.code,
+      application: item.application,
+      performanceFeature: item.performanceFeature,
+      type: item.type,
+    })
+    setDialogOpen(true)
+  }
+
+  const handleDelete = async (item: Product) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return
+    }
+
+    setTableLoading(true)
+
+    const payload: ProductPayload = {
+      code: item.code,
+      application: item.application,
+      performanceFeature: item.performanceFeature,
+      type: item.type,
+    }
+
+    // call deleteProduct(item, payload) per your API signature
+    const res = await deleteProduct(item, payload)
+    setTableLoading(false)
+
+    if (res.success) {
+      toast({ title: 'Deleted successfully' })
+      // ❇️ re-fetch so table, filters, and meta are all up-to-date
+      await fetchProducts()
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    let res
+    if (editingItem) {
+      res = await updateProduct(editingItem.id, formData)
+    } else {
+      res = await createProduct(formData)
+    }
+
+    setSubmitting(false)
+
+    if (res.success) {
+      if (editingItem) {
+        toast({ title: 'Product updated' })
+      } else {
+        toast({ title: 'Product created' })
+      }
+      setDialogOpen(false)
+      // after create/update, also re-fetch to reflect new total, filters, etc.
+      await fetchProducts()
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
 
   return (
     <div>
       <DataTable
         data={products}
         columns={columns}
-        onAdd={handleAdd}
-        onEdit={handleEdit}
+        onAdd={openAddDialog}
+        onEdit={openEditDialog}
         onDelete={handleDelete}
         title="Products"
         searchPlaceholder="Search products..."
+        loading={isTableLoading}
+        // you can wire up pagination controls here using meta and fetchProducts
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? 'Edit Product' : 'Add Product'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name</Label>
+
+          <form onSubmit={handleSubmit} className="space-y-6 p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="code">Code</Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, code: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="type">Type</Label>
+                <Input
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, type: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <Label htmlFor="application">Application</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                id="application"
+                value={formData.application}
+                onChange={(e) =>
+                  setFormData((f) => ({ ...f, application: e.target.value }))
+                }
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="categoryId">Category</Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+
+            <div className="flex flex-col space-y-1">
+              <Label>Performance Features</Label>
+              <WysiwygEditor
+                value={formData.performanceFeature}
+                onChange={(v) =>
+                  setFormData((f) => ({ ...f, performanceFeature: v }))
+                }
+                placeholder="Describe performance features..."
+                className="min-h-[150px]"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {productCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="image">Image URL</Label>
-              <Input
-                id="image"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="/placeholder.svg"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="pdfDatasheet">PDF Datasheet URL</Label>
-              <Input
-                id="pdfDatasheet"
-                value={formData.pdfDatasheet}
-                onChange={(e) => setFormData({ ...formData, pdfDatasheet: e.target.value })}
-                placeholder="/sample.pdf"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                required
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingItem ? 'Update' : 'Create'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Spinner /> : editingItem ? 'Update' : 'Create'}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
-
-export default Products;
+  )
+}

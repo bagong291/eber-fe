@@ -1,190 +1,273 @@
+// src/pages/Careers.tsx
+import { useState, useEffect } from 'react'
+import {
+  listCareers,
+  getCareer,
+  createCareer,
+  updateCareer,
+  deleteCareer,
+  Career,
+  CareerPayload,
+} from '@/services/career/careerApi'
+import DataTable from '@/components/DataTable'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import WysiwygEditor from '@/components/WysiwygEditor'
+import { toast } from '@/hooks/use-toast'
 
-import { useState } from 'react';
-import { useDataStore, Career } from '@/store/dataStore';
-import DataTable from '@/components/DataTable';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import WysiwygEditor from '@/components/WysiwygEditor';
-import { toast } from '@/hooks/use-toast';
+// Simple spinner component
+const Spinner = () => (
+  <div
+    className="w-6 h-6 border-4 border-gray-200 border-t-gray-500 rounded-full animate-spin"
+    aria-label="Loading"
+  />
+)
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
 
 const Careers = () => {
-  const { careers, addItem, updateItem, deleteItem } = useDataStore();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<Career | null>(null);
-  const [formData, setFormData] = useState({
-    jobTitle: '',
+  const [careers, setCareers] = useState<Career[]>([])
+  const [isTableLoading, setTableLoading] = useState(false)
+  const [isDialogOpen, setDialogOpen] = useState(false)
+  const [isDialogLoading, setDialogLoading] = useState(false)
+  const [isSubmitting, setSubmitting] = useState(false)
+
+  const [editingItem, setEditingItem] = useState<Career | null>(null)
+  const [formData, setFormData] = useState<CareerPayload>({
+    position: '',
     location: '',
-    type: 'full-time' as 'full-time' | 'part-time' | 'contract',
+    type: 'fulltime',
     description: '',
-    status: 'active' as 'active' | 'closed'
-  });
+  })
 
   const columns = [
-    { key: 'jobTitle' as keyof Career, label: 'Job Title' },
+    { key: 'id' as keyof Career, label: 'id' },
+    { key: 'position' as keyof Career, label: 'Position' },
     { key: 'location' as keyof Career, label: 'Location' },
     { key: 'type' as keyof Career, label: 'Type' },
-    { 
-      key: 'status' as keyof Career, 
-      label: 'Status',
-      render: (value: string) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${
-          value === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {value}
-        </span>
-      )
+    {
+      key: 'createdAt' as keyof Career,
+      label: 'Created At',
+      render: (value: string) => formatDateTime(value),
     },
-  ];
+    {
+      key: 'updatedAt' as keyof Career,
+      label: 'Updated At',
+      render: (value: string) => formatDateTime(value),
+    },
+  ]
 
-  const handleAdd = () => {
-    setEditingItem(null);
-    setFormData({
-      jobTitle: '',
-      location: '',
-      type: 'full-time',
-      description: '',
-      status: 'active'
-    });
-    setIsDialogOpen(true);
-  };
+  useEffect(() => {
+    fetchCareers()
+  }, [])
 
-  const handleEdit = (item: Career) => {
-    setEditingItem(item);
-    setFormData({
-      jobTitle: item.jobTitle,
-      location: item.location,
-      type: item.type,
-      description: item.description,
-      status: item.status
-    });
-    setIsDialogOpen(true);
-  };
+  const fetchCareers = async () => {
+    setTableLoading(true)
+    const res = await listCareers()
+    setTableLoading(false)
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this job opening?')) {
-      deleteItem('careers', id);
-      toast({ title: 'Job opening deleted successfully' });
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingItem) {
-      updateItem('careers', editingItem.id, formData);
-      toast({ title: 'Job opening updated successfully' });
+    if (res.success) {
+      setCareers(res.data)
     } else {
-      addItem('careers', formData);
-      toast({ title: 'Job opening created successfully' });
+      toast({ title: res.message, variant: 'destructive' })
     }
-    
-    setIsDialogOpen(false);
-  };
+  }
+
+  const openAddDialog = () => {
+    setEditingItem(null)
+    setFormData({
+      position: '',
+      location: '',
+      type: 'fulltime',
+      description: '',
+    })
+    setDialogOpen(true)
+  }
+
+  const openEditDialog = async (item: Career) => {
+    setDialogLoading(true)
+    const res = await getCareer(item.id)
+    setDialogLoading(false)
+
+    if (res.success) {
+      setEditingItem(res.data)
+      setFormData({
+        position: res.data.position,
+        location: res.data.location,
+        type: res.data.type,
+        description: res.data.description,
+      })
+      setDialogOpen(true)
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (item: Career) => {
+    if (!window.confirm('Are you sure you want to delete this job opening?')) {
+      return
+    }
+
+    setTableLoading(true)
+    const res = await deleteCareer(item.id)
+    setTableLoading(false)
+
+    if (res.success) {
+      setCareers((prev) => prev.filter((c) => c.id !== item.id))
+      toast({ title: 'Deleted successfully' })
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    let res
+    if (editingItem) {
+      res = await updateCareer(editingItem.id, formData)
+    } else {
+      res = await createCareer(formData)
+    }
+
+    setSubmitting(false)
+    if (res.success) {
+      if (editingItem) {
+        setCareers((prev) =>
+          prev.map((c) => (c.id === editingItem.id ? res.data : c))
+        )
+        toast({ title: 'Job opening updated successfully' })
+      } else {
+        setCareers((prev) => [res.data, ...prev])
+        toast({ title: 'Job opening created successfully' })
+      }
+      setDialogOpen(false)
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
 
   return (
     <div>
       <DataTable
         data={careers}
         columns={columns}
-        onAdd={handleAdd}
-        onEdit={handleEdit}
+        onAdd={openAddDialog}
+        onEdit={openEditDialog}
         onDelete={handleDelete}
         title="Job Openings"
         searchPlaceholder="Search job openings..."
+        loading={isTableLoading}
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? 'Edit Job Opening' : 'Add Job Opening'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+
+          {isDialogLoading ? (
+            <div className="flex justify-center items-center p-8">
+              <Spinner />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={formData.position}
+                    onChange={(e) =>
+                      setFormData((f) => ({ ...f, position: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) =>
+                      setFormData((f) => ({ ...f, location: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="type">Employment Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: CareerPayload['type']) =>
+                      setFormData((f) => ({ ...f, type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fulltime">Full-time</SelectItem>
+                      <SelectItem value="parttime">Part-time</SelectItem>
+                      <SelectItem value="internship">Internship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div>
-                <Label htmlFor="jobTitle">Job Title</Label>
-                <Input
-                  id="jobTitle"
-                  value={formData.jobTitle}
-                  onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                  required
+                <Label>Job Description</Label>
+                <WysiwygEditor
+                  value={formData.description}
+                  onChange={(value) =>
+                    setFormData((f) => ({ ...f, description: value }))
+                  }
+                  placeholder="Enter job description..."
                 />
               </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type">Employment Type</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: 'full-time' | 'part-time' | 'contract') => 
-                    setFormData({ ...formData, type: value })
-                  }
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full-time">Full-time</SelectItem>
-                    <SelectItem value="part-time">Part-time</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Spinner /> : editingItem ? 'Update' : 'Create'}
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: 'active' | 'closed') => 
-                    setFormData({ ...formData, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label>Job Description</Label>
-              <WysiwygEditor
-                value={formData.description}
-                onChange={(value) => setFormData({ ...formData, description: value })}
-                placeholder="Enter job description..."
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingItem ? 'Update' : 'Create'}
-              </Button>
-            </div>
-          </form>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
+  )
+}
 
-export default Careers;
+export default Careers

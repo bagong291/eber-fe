@@ -13,6 +13,7 @@ import {
   Application, 
   ContactInfo 
 } from '@/store/dataStore';
+const api_url = import.meta.env.VITE_API_URL;
 
 // Simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

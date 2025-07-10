@@ -1,0 +1,71 @@
+buatlah file baru untuk api ini : articles
+create
+curl --location 'localhost:3000/api/v1/articles' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQ5MzkzNTc1LCJleHAiOjE3NDkzOTcxNzV9.45-rijrdtCPm28Bhu_m29QqMp11xEM-RP65nhPkD-9g' \
+--data '{"title":"Testing Article","body":"Testing Body","author":"testing author","image":{"extension":"png","data":"base64string"}}'
+response
+{
+    "status": "success",
+    "data": {
+        "id": 3,
+        "title": "Testing Articxle",
+        "body": "Testing Body",
+        "author": "testing author",
+        "image":{"extension":"png","data":"base64string","name":"nama.png"},
+        "updatedAt": "2025-07-05T14:17:10.416Z",
+        "createdAt": "2025-07-05T14:17:10.416Z"
+    }
+}
+update
+curl --location --request PUT 'localhost:3021/api/v1/articles/2' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQ5MzkzNTc1LCJleHAiOjE3NDkzOTcxNzV9.45-rijrdtCPm28Bhu_m29QqMp11xEM-RP65nhPkD-9g' \
+--data '{"title":"Testing Article","body":"Testing Body","author":"testing author","image":{"extension":"png","data":"base64string"}}'
+response 
+{
+    "status": "success",
+    "data": {
+        "id": 2,
+        "title": "Testing Articxle",
+        "body": "Testing Body",
+        "author": "testing author",
+        "image":{"extension":"png","data":"base64string","name":"nama.png"},
+        "updatedAt": "2025-07-05T14:17:10.416Z",
+        "createdAt": "2025-07-05T14:17:10.416Z"
+    }
+}
+list
+curl --location 'localhost:3021/api/v1/articles' \
+--data ''
+
+response
+{
+    "status": "success",
+    "data": [{
+        "id": 1,
+        "title": "Testing Article",
+        "body": "Testing Body",
+        "author": "testing author",
+        "createdAt": "2025-06-08T14:45:00.833Z",
+        "updatedAt": "2025-06-08T14:45:00.833Z",
+        "image":{"extension":"png","data":"base64string","name":"nama.png"},
+    }]
+}
+get
+curl --location 'localhost:3021/api/v1/articles/1' \
+--data ''
+
+response
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "title": "Testing Article",
+        "body": "Testing Body",
+        "author": "testing author",
+        "createdAt": "2025-06-08T14:45:00.833Z",
+        "updatedAt": "2025-06-08T14:45:00.833Z",
+        "image":{"extension":"png","data":"base64string","name":"nama.png"},
+    }
+}

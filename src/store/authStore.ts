@@ -1,40 +1,46 @@
-
+// src/store/authStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface User {
-  id: string;
-  email: string;
-  name: string;
+  username: string;
+  token: string;
 }
 
 interface AuthState {
   user: User | null;
-  login: (email: string, password: string) => boolean;
+  login: (user: User) => void;
   logout: () => void;
+  getToken: () => string | null;
+  isLoggedIn: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
-      login: (email: string, password: string) => {
-        // Hardcoded credentials
-        if (email === 'admin@example.com' && password === 'admin123') {
-          const user: User = {
-            id: '1',
-            email: 'admin@example.com',
-            name: 'Admin User'
-          };
-          set({ user });
-          return true;
-        }
-        return false;
+
+      // store the entire User object; you can extend User later
+      login: (user) => {
+        set({ user });
       },
-      logout: () => set({ user: null }),
+
+      logout: () => {
+        set({ user: null });
+      },
+
+      // convenience getters
+      getToken: () => {
+        return get().user?.token ?? null;
+      },
+      isLoggedIn: () => {
+        return get().user !== null;
+      },
     }),
     {
-      name: 'admin-auth',
+      name: 'admin-auth',      // key in localStorage
+      // you can add whitelist/blacklist here if you only want to persist certain fields
+      // whitelist: ['user']
     }
   )
 );
