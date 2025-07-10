@@ -61,6 +61,23 @@ export default function Articles() {
     group: '',
   })
   const [newImage, setNewImage] = useState<ArticleImagePayload | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfPayload, setPdfPayload] = useState<{ name: string; extension: string; data: string } | null>(null)
+  // Fixed group options
+  const groupOptions = [
+    'CSR & Community Engagement',
+    'Health, Safety & Environmental',
+    'Ethical Governence & Compliance',
+    'Eber Magazine',
+    'Company Event',
+  ]
+
+  const [selectedGroup, setSelectedGroup] = useState<string>('all')
+
+  // Filter articles by selected group
+  const filteredArticles = selectedGroup === 'all'
+    ? articles
+    : articles.filter(a => a.group === selectedGroup)
 
   const columns = [
     { key: 'id' as const, label: 'ID' },
@@ -124,6 +141,7 @@ export default function Articles() {
     setEditingItem(null)
     setFormData({ title: '', body: '', author: currentUsername, group: '' })
     setNewImage(null)
+    setPdfFile(null)
     setDialogOpen(true)
   }
 
@@ -142,8 +160,8 @@ export default function Articles() {
       author: res.data.author,
       group: res.data.group || '',
     })
-    console.log(res.data)
     setNewImage(null)
+    setPdfFile(null)
     setDialogOpen(true)
   }
 
@@ -161,6 +179,19 @@ export default function Articles() {
       })
     }
     reader.readAsDataURL(file)
+  }
+
+  function handlePdfChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      const ext = file.name.split('.').pop() || 'pdf'
+      setPdfPayload({ name: file.name, extension: ext, data: base64 })
+    }
+    reader.readAsDataURL(file)
+    setPdfFile(file)
   }
 
   async function handleDelete(item: Article) {
@@ -187,31 +218,31 @@ export default function Articles() {
 
     let res
     if (editingItem) {
-      // For updates, only include image if a new one was selected
-      const updatePayload: UpdateArticlePayload = {
+      const updatePayload: UpdateArticlePayload & { pdf?: { name: string; extension: string; data: string } } = {
         ...formData,
-        ...(newImage && { image: newImage })
+        ...(newImage && { image: newImage }),
+        ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
-      
       res = await updateArticle(editingItem.id, updatePayload)
     } else {
-      // For new articles, image is required
       if (!newImage) {
         toast({ title: 'Please select an image', variant: 'destructive' })
         setSubmitting(false)
         return
       }
-
-      const createPayload: ArticlePayload = {
+      if (formData.group === 'Eber Magazine' && !pdfPayload) {
+        toast({ title: 'Please upload a PDF for Eber Magazine', variant: 'destructive' })
+        setSubmitting(false)
+        return
+      }
+      const createPayload: ArticlePayload & { pdf?: { name: string; extension: string; data: string } } = {
         ...formData,
         image: newImage,
+        ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
-      
       res = await createArticle({ ...createPayload, author: currentUsername })
     }
-
     setSubmitting(false)
-
     if (res.success) {
       toast({ title: editingItem ? 'Article updated' : 'Article created' })
       setDialogOpen(false)
@@ -229,8 +260,30 @@ export default function Articles() {
 
   return (
     <div>
+      {/* Search bar and Group Filter in the same row */}
+      <div className="flex items-center mb-4 space-x-4">
+        {/* DataTable's search bar will render here (max-w-sm for search bar) */}
+        {/* Group Filter Dropdown */}
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="group-filter">Group:</Label>
+          <Select
+            value={selectedGroup}
+            onValueChange={setSelectedGroup}
+          >
+            <SelectTrigger className="w-48" id="group-filter">
+              <SelectValue placeholder="All Groups" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Groups</SelectItem>
+              {groupOptions.map((group) => (
+                <SelectItem key={group} value={group}>{group}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <DataTable
-        data={articles.map(article => ({ ...article, id: String(article.id) }))}
+        data={filteredArticles.map(article => ({ ...article, id: String(article.id) }))}
         columns={columns}
         onAdd={openAddDialog}
         onEdit={(item) => openEditDialog({ ...item, id: Number(item.id) } as Article)}
@@ -253,6 +306,30 @@ export default function Articles() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6 p-4">
+              {/* Group Dropdown at the top */}
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="group">Group</Label>
+                <Select
+                  value={formData.group || "none"}
+                  onValueChange={(value) => {
+                    setFormData((f) => ({ ...f, group: value === "none" ? "" : value }))
+                    // Reset PDF and body when group changes
+                    setPdfFile(null)
+                    setFormData((f) => ({ ...f, body: '' }))
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Group</SelectItem>
+                    {groupOptions.map((group) => (
+                      <SelectItem key={group} value={group}>{group}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex flex-col space-y-2">
                 <Label htmlFor="image">
                   Article Image
@@ -287,42 +364,37 @@ export default function Articles() {
                     required
                   />
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <Label htmlFor="author">Author</Label>
-                  <Input id="author" value={formData.author} readOnly />
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <Label htmlFor="group">Group</Label>
-                  <Select
-                    value={formData.group || "none"}
-                    onValueChange={(value) =>
-                      setFormData((f) => ({ ...f, group: value === "none" ? "" : value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Group</SelectItem>
-                      <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="news">News</SelectItem>
-                      <SelectItem value="announcement">Announcement</SelectItem>
-                      <SelectItem value="article">Article</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Author field removed from UI, but value is still set in formData */}
+                {/* PDF upload for Eber Magazine */}
+                {formData.group === 'Eber Magazine' && (
+                  <div className="flex flex-col space-y-1">
+                    <Label htmlFor="pdf">PDF</Label>
+                    <Input
+                      id="pdf"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfChange}
+                    />
+                    {pdfFile && (
+                      <span className="text-xs text-gray-600">{pdfFile.name}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="flex flex-col space-y-1">
-                <Label>Body</Label>
-                <WysiwygEditor
-                  value={formData.body}
-                  onChange={(v) =>
-                    setFormData((f) => ({ ...f, body: v }))
-                  }
-                  placeholder="Write your article..."
-                />
-              </div>
+              {/* Hide body if group is Eber Magazine */}
+              {formData.group !== 'Eber Magazine' && (
+                <div className="flex flex-col space-y-1">
+                  <Label>Body</Label>
+                  <WysiwygEditor
+                    value={formData.body}
+                    onChange={(v) =>
+                      setFormData((f) => ({ ...f, body: v }))
+                    }
+                    placeholder="Write your article..."
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3 pt-4">
                 <Button
