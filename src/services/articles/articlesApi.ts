@@ -36,6 +36,7 @@ export interface Article {
   title: string
   body: string
   author: string
+  group: string | null
   image: string // Changed from ArticleImage to string (URL)
   createdAt: string
   updatedAt: string
@@ -55,6 +56,13 @@ export interface ArticleImagePayload {
  */
 export type ArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image'> & {
   image: ArticleImagePayload
+}
+
+/**
+ * Payload for updating articles (image is optional)
+ */
+export type UpdateArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image'> & {
+  image?: ArticleImagePayload
 }
 
 /**
@@ -128,7 +136,7 @@ export function createArticle(
  */
 export function updateArticle(
   id: number,
-  payload: ArticlePayload
+  payload: UpdateArticlePayload
 ): Promise<ApiResponse<Article>> {
   return handleRequest(
     apiClient.put<ApiWrapper<Article>>(`/articles/${id}`, payload)

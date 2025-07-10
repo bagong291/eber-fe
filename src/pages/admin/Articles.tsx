@@ -8,6 +8,7 @@ import {
   deleteArticle,
   Article,
   ArticlePayload,
+  UpdateArticlePayload,
   ArticleImagePayload,
 } from '@/services/articles/articlesApi'
 import { useAuthStore } from '@/store/authStore'
@@ -21,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import WysiwygEditor from '@/components/WysiwygEditor'
 import { toast } from '@/hooks/use-toast'
 
@@ -51,10 +53,12 @@ export default function Articles() {
     title: string
     body: string
     author: string
+    group: string
   }>({
     title: '',
     body: '',
     author: currentUsername,
+    group: '',
   })
   const [newImage, setNewImage] = useState<ArticleImagePayload | null>(null)
 
@@ -62,6 +66,19 @@ export default function Articles() {
     { key: 'id' as const, label: 'ID' },
     { key: 'title' as const, label: 'Title' },
     { key: 'author' as const, label: 'Author' },
+    { 
+      key: 'group' as const, 
+      label: 'Group',
+      render: (group: string | null) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          group 
+            ? 'bg-blue-100 text-blue-800' 
+            : 'bg-gray-100 text-gray-600'
+        }`}>
+          {group || 'No Group'}
+        </span>
+      ),
+    },
     {
       key: 'image' as const,
       label: 'Image',
@@ -105,7 +122,7 @@ export default function Articles() {
 
   function openAddDialog() {
     setEditingItem(null)
-    setFormData({ title: '', body: '', author: currentUsername })
+    setFormData({ title: '', body: '', author: currentUsername, group: '' })
     setNewImage(null)
     setDialogOpen(true)
   }
@@ -123,6 +140,7 @@ export default function Articles() {
       title: res.data.title,
       body: res.data.body,
       author: res.data.author,
+      group: res.data.group || '',
     })
     console.log(res.data)
     setNewImage(null)
@@ -167,32 +185,29 @@ export default function Articles() {
     e.preventDefault()
     setSubmitting(true)
 
-    // choose image for payload
-    let imgPayload: ArticleImagePayload
-    if (newImage) {
-      imgPayload = newImage
-    } else if (editingItem?.image) {
-      // For existing images, we need to create a placeholder payload
-      // since we don't have the original image data
-      toast({ title: 'Please select an image for update', variant: 'destructive' })
-      setSubmitting(false)
-      return
-    } else {
-      toast({ title: 'Please select an image', variant: 'destructive' })
-      setSubmitting(false)
-      return
-    }
-
-    const payload: ArticlePayload = {
-      ...formData,
-      image: imgPayload,
-    }
-
     let res
     if (editingItem) {
-      res = await updateArticle(editingItem.id, payload)
+      // For updates, only include image if a new one was selected
+      const updatePayload: UpdateArticlePayload = {
+        ...formData,
+        ...(newImage && { image: newImage })
+      }
+      
+      res = await updateArticle(editingItem.id, updatePayload)
     } else {
-      res = await createArticle({ ...payload, author: currentUsername })
+      // For new articles, image is required
+      if (!newImage) {
+        toast({ title: 'Please select an image', variant: 'destructive' })
+        setSubmitting(false)
+        return
+      }
+
+      const createPayload: ArticlePayload = {
+        ...formData,
+        image: newImage,
+      }
+      
+      res = await createArticle({ ...createPayload, author: currentUsername })
     }
 
     setSubmitting(false)
@@ -239,7 +254,12 @@ export default function Articles() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6 p-4">
               <div className="flex flex-col space-y-2">
-                <Label htmlFor="image">Article Image</Label>
+                <Label htmlFor="image">
+                  Article Image
+                  {editingItem && (
+                    <span className="text-sm text-gray-500 ml-2">(Optional - leave empty to keep current image)</span>
+                  )}
+                </Label>
                 <Input
                   id="image"
                   type="file"
@@ -255,7 +275,7 @@ export default function Articles() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col space-y-1">
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -270,6 +290,26 @@ export default function Articles() {
                 <div className="flex flex-col space-y-1">
                   <Label htmlFor="author">Author</Label>
                   <Input id="author" value={formData.author} readOnly />
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <Label htmlFor="group">Group</Label>
+                  <Select
+                    value={formData.group || "none"}
+                    onValueChange={(value) =>
+                      setFormData((f) => ({ ...f, group: value === "none" ? "" : value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Group</SelectItem>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="news">News</SelectItem>
+                      <SelectItem value="announcement">Announcement</SelectItem>
+                      <SelectItem value="article">Article</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
