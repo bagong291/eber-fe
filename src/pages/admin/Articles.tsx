@@ -63,6 +63,7 @@ export default function Articles() {
   const [newImage, setNewImage] = useState<ArticleImagePayload | null>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [pdfPayload, setPdfPayload] = useState<{ name: string; extension: string; data: string } | null>(null)
+  const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null)
   // Fixed group options
   const groupOptions = [
     'CSR & Community Engagement',
@@ -162,6 +163,8 @@ export default function Articles() {
     })
     setNewImage(null)
     setPdfFile(null)
+    // If the article has a pdf field, set the existing PDF URL
+    setExistingPdfUrl(res.data.pdf ? `${import.meta.env.VITE_IMAGE_URL || ''}${res.data.pdf}` : null)
     setDialogOpen(true)
   }
 
@@ -192,6 +195,8 @@ export default function Articles() {
     }
     reader.readAsDataURL(file)
     setPdfFile(file)
+    // If user uploads a new PDF, clear the existing link
+    setExistingPdfUrl(null)
   }
 
   async function handleDelete(item: Article) {
@@ -305,10 +310,10 @@ export default function Articles() {
               <Spinner />
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6 p-4">
-              {/* Group Dropdown at the top */}
-              <div className="flex flex-col space-y-1">
-                <Label htmlFor="group">Group</Label>
+            <form onSubmit={handleSubmit} className="space-y-8 p-4">
+              {/* Group Selection */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="group" className="font-semibold text-base">Group</Label>
                 <Select
                   value={formData.group || "none"}
                   onValueChange={(value) => {
@@ -330,8 +335,9 @@ export default function Articles() {
                 </Select>
               </div>
 
+              {/* Image Upload */}
               <div className="flex flex-col space-y-2">
-                <Label htmlFor="image">
+                <Label htmlFor="image" className="font-semibold text-base">
                   Article Image
                   {editingItem && (
                     <span className="text-sm text-gray-500 ml-2">(Optional - leave empty to keep current image)</span>
@@ -343,49 +349,65 @@ export default function Articles() {
                   accept="image/*"
                   onChange={handleImageChange}
                 />
+                <span className="text-xs text-gray-500">Upload a cover image for the article. Recommended size: 800x600px.</span>
                 {previewSrc && (
                   <img
                     src={previewSrc}
                     alt="Preview"
-                    className="mt-2 max-h-40 rounded-md shadow-sm"
+                    className="mt-2 max-h-40 rounded-md shadow-sm border"
                   />
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <Label htmlFor="title">Title</Label>
+              {/* Title Field */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="title" className="font-semibold text-base">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, title: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              {/* PDF upload for Eber Magazine, directly under Title */}
+              {formData.group === 'Eber Magazine' && (
+                <div className="flex flex-col space-y-3 border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50 shadow-sm mt-2">
+                  <Label htmlFor="pdf" className="font-semibold text-base mb-1 flex items-center gap-2">
+                    PDF <span className="text-xs text-blue-700">(Required for Eber Magazine)</span>
+                  </Label>
+                  {existingPdfUrl && (
+                    <div className="mb-2">
+                      <span className="block text-xs text-gray-500 mb-1">Current PDF:</span>
+                      <a
+                        href={existingPdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-700 underline text-xs font-medium"
+                      >
+                        View existing PDF
+                      </a>
+                    </div>
+                  )}
                   <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData((f) => ({ ...f, title: e.target.value }))
-                    }
-                    required
+                    id="pdf"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfChange}
+                    className="bg-white border border-blue-200 rounded"
                   />
+                  <span className="text-xs text-blue-700">Upload a PDF file for the magazine. Max size: 10MB. Only PDF files are accepted.</span>
+                  {pdfFile && (
+                    <span className="text-xs text-gray-700 font-medium mt-1">Selected: {pdfFile.name}</span>
+                  )}
                 </div>
-                {/* Author field removed from UI, but value is still set in formData */}
-                {/* PDF upload for Eber Magazine */}
-                {formData.group === 'Eber Magazine' && (
-                  <div className="flex flex-col space-y-1">
-                    <Label htmlFor="pdf">PDF</Label>
-                    <Input
-                      id="pdf"
-                      type="file"
-                      accept="application/pdf"
-                      onChange={handlePdfChange}
-                    />
-                    {pdfFile && (
-                      <span className="text-xs text-gray-600">{pdfFile.name}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* Hide body if group is Eber Magazine */}
+              {/* Body Field (hidden for Eber Magazine) */}
               {formData.group !== 'Eber Magazine' && (
-                <div className="flex flex-col space-y-1">
-                  <Label>Body</Label>
+                <div className="flex flex-col space-y-2">
+                  <Label className="font-semibold text-base">Body</Label>
                   <WysiwygEditor
                     value={formData.body}
                     onChange={(v) =>
@@ -393,10 +415,12 @@ export default function Articles() {
                     }
                     placeholder="Write your article..."
                   />
+                  <span className="text-xs text-gray-500">Write the main content of the article here.</span>
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4">
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t pt-6 mt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -404,7 +428,7 @@ export default function Articles() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
                   {isSubmitting ? <Spinner /> : editingItem ? 'Update' : 'Create'}
                 </Button>
               </div>
