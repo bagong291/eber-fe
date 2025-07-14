@@ -35,6 +35,7 @@ const AdminLayout = () => {
     { path: '/admin/hero-banners', icon: Image, label: 'Hero Banners' },
     { path: '/admin/about-us', icon: Info, label: 'About Us' },
     { path: '/admin/corporate-entities', icon: Building, label: 'Corporate Entities' },
+    { path: '/admin/company-profiles-admin', icon: Building, label: 'Admin Company Profiles' },
     { path: '/admin/certifications', icon: Award, label: 'Certifications' },
     { path: '/admin/product-categories', icon: FolderTree, label: 'Product Categories' },
     { path: '/admin/products', icon: Package, label: 'Products' },

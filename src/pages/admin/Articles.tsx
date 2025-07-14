@@ -107,7 +107,7 @@ export default function Articles() {
       label: 'Image',
       render: (imageUrl: string) => (
         <img 
-          src={`${import.meta.env.VITE_IMAGE_URL || ''}${imageUrl}`} 
+          src={`${import.meta.env.VITE_IMAGE_URL || ''}/${imageUrl}`} 
           alt="Article" 
           className="w-16 h-12 object-cover rounded"
           onError={(e) => {

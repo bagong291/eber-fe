@@ -20,6 +20,7 @@ import Careers from "./pages/admin/Careers";
 import Applications from "./pages/admin/Applications";
 import ContactInfo from "./pages/admin/ContactInfo";
 import NotFound from "./pages/NotFound";
+import AdminCompanyProfiles from "./pages/admin/AdminCompanyProfiles";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="careers" element={<Careers />} />
             <Route path="applications" element={<Applications />} />
             <Route path="contact-info" element={<ContactInfo />} />
+            <Route path="company-profiles-admin" element={<AdminCompanyProfiles />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
