@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useState, useEffect } from 'react'
 
 const MOBILE_BREAKPOINT = 768
 
@@ -16,4 +17,19 @@ export function useIsMobile() {
   }, [])
 
   return !!isMobile
+}
+
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
 }

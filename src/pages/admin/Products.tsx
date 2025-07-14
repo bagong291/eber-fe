@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import WysiwygEditor from '@/components/WysiwygEditor'
 import { toast } from '@/hooks/use-toast'
+import { useDebounce } from '@/hooks/use-mobile' // Use debounce hook or implement one
 
 const Spinner = () => (
   <div
@@ -50,6 +51,8 @@ export default function Products() {
 
   const [typeFilter, setTypeFilter] = useState<string[]>([])
   const [appFilter, setAppFilter] = useState<string[]>([])
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
 
   const [isTableLoading, setTableLoading] = useState(false)
 
@@ -84,16 +87,18 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts()
-  }, [meta.page, typeFilter, appFilter])
+  }, [debouncedSearch, meta.page, meta.pageSize, typeFilter, appFilter])
 
   async function fetchProducts() {
     setTableLoading(true)
-    const res = await listProducts(
-      { type: typeFilter, application: appFilter },
-      meta.page
-    )
+    const params: Record<string, string | number | string[]> = {}
+    if (debouncedSearch) params.search = debouncedSearch
+    if (typeFilter.length) params.type = typeFilter
+    if (appFilter.length) params.application = appFilter
+    params.page = meta.page
+    params.pageSize = meta.pageSize
+    const res = await listProducts(params as any, meta.page, meta.pageSize)
     setTableLoading(false)
-
     if (res.success) {
       const d = res.data as ProductsListData
       setProducts(d.data)
@@ -178,16 +183,32 @@ export default function Products() {
   return (
     <div>
       <DataTable
-        data={products}
+        data={products.map(product => ({ ...product, id: String(product.id) }))}
         columns={columns}
         onAdd={openAddDialog}
-        onEdit={openEditDialog}
-        onDelete={handleDelete}
+        onEdit={item => openEditDialog({ ...item, id: Number(item.id) } as Product)}
+        onDelete={id => handleDelete({ ...products.find(p => String(p.id) === id)!, id: Number(id) } as Product)}
         title="Products"
         searchPlaceholder="Search products..."
-        loading={isTableLoading}
-        // you can wire up pagination controls here using meta and fetchProducts
       />
+      {/* Pagination Controls - bottom, centered, modern UI */}
+      <div className="flex flex-col items-center justify-center mt-6">
+        <div className="flex items-center space-x-4 bg-white rounded-lg shadow px-4 py-2">
+          <Button size="sm" variant="outline" disabled={meta.page <= 1} onClick={() => setMeta(m => ({ ...m, page: m.page - 1 }))}>Prev</Button>
+          <span className="text-sm font-medium">Page {meta.page} of {Math.ceil(meta.total / meta.pageSize) || 1}</span>
+          <Button size="sm" variant="outline" disabled={meta.page >= Math.ceil(meta.total / meta.pageSize)} onClick={() => setMeta(m => ({ ...m, page: m.page + 1 }))}>Next</Button>
+          <Label className="ml-2 text-sm">Page Size:</Label>
+          <select
+            className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={meta.pageSize}
+            onChange={e => setMeta(m => ({ ...m, pageSize: Number(e.target.value) || 10, page: 1 }))}
+          >
+            {[10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl h-[90vh] overflow-y-auto">

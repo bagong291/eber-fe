@@ -54,7 +54,7 @@ async function handleRequest<T>(
     }
   } catch (err) {
     let message = 'Network or server error'
-    let empty = (null as unknown) as T
+    const empty = (null as unknown) as T
 
     if ((err as AxiosError).isAxiosError) {
       const axiosErr = err as AxiosError<{ message?: string }>
@@ -86,9 +86,18 @@ export function getCareer(id: number): Promise<ApiResponse<Career>> {
 /**
  * Fetch all careers
  */
-export function listCareers(): Promise<ApiResponse<Career[]>> {
+export interface CareerListResponse {
+  data: Career[];
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
+}
+
+export function listCareers(params?: Record<string, string | number | undefined>): Promise<ApiResponse<CareerListResponse>> {
   return handleRequest(
-    apiClient.get<ApiWrapper<Career[]>>(`/careers`)
+    apiClient.get<ApiWrapper<CareerListResponse>>(`/careers`, { params })
   )
 }
 

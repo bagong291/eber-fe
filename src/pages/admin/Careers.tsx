@@ -1,5 +1,6 @@
 // src/pages/Careers.tsx
 import { useState, useEffect } from 'react'
+import { useDebounce } from '@/hooks/use-mobile' // Use debounce hook or implement one
 import {
   listCareers,
   getCareer,
@@ -8,6 +9,7 @@ import {
   deleteCareer,
   Career,
   CareerPayload,
+  CareerListResponse,
 } from '@/services/career/careerApi'
 import DataTable from '@/components/DataTable'
 import {
@@ -58,6 +60,10 @@ const Careers = () => {
     description: '',
   })
 
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
+  const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 })
+
   const columns = [
     { key: 'id' as keyof Career, label: 'id' },
     { key: 'position' as keyof Career, label: 'Position' },
@@ -77,15 +83,19 @@ const Careers = () => {
 
   useEffect(() => {
     fetchCareers()
-  }, [])
+  }, [debouncedSearch, meta.page, meta.pageSize])
 
   const fetchCareers = async () => {
     setTableLoading(true)
-    const res = await listCareers()
+    const params: Record<string, string | number> = {}
+    if (debouncedSearch) params.search = debouncedSearch
+    params.page = meta.page
+    params.pageSize = meta.pageSize
+    const res = await listCareers(params)
     setTableLoading(false)
-
     if (res.success) {
-      setCareers(res.data)
+      setCareers(res.data.data)
+      setMeta(res.data.meta)
     } else {
       toast({ title: res.message, variant: 'destructive' })
     }
@@ -168,16 +178,42 @@ const Careers = () => {
 
   return (
     <div>
+      {/* Search bar */}
+      <div className="flex items-center mb-4 space-x-4">
+        <Input
+          className="max-w-sm"
+          placeholder="Search job openings..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
       <DataTable
-        data={careers}
+        data={careers.map(career => ({ ...career, id: String(career.id) }))}
         columns={columns}
         onAdd={openAddDialog}
-        onEdit={openEditDialog}
-        onDelete={handleDelete}
+        onEdit={item => { openEditDialog({ ...item, id: Number(item.id) } as Career) }}
+        onDelete={id => { const career = careers.find(c => String(c.id) === id); if (career) handleDelete({ ...career, id: Number(career.id) } as Career); }}
         title="Job Openings"
         searchPlaceholder="Search job openings..."
-        loading={isTableLoading}
       />
+      {/* Pagination Controls - bottom, centered, modern UI */}
+      <div className="flex flex-col items-center justify-center mt-6">
+        <div className="flex items-center space-x-4 bg-white rounded-lg shadow px-4 py-2">
+          <Button size="sm" variant="outline" disabled={meta.page <= 1} onClick={() => setMeta(m => ({ ...m, page: m.page - 1 }))}>Prev</Button>
+          <span className="text-sm font-medium">Page {meta.page} of {Math.ceil(meta.total / meta.pageSize) || 1}</span>
+          <Button size="sm" variant="outline" disabled={meta.page >= Math.ceil(meta.total / meta.pageSize)} onClick={() => setMeta(m => ({ ...m, page: m.page + 1 }))}>Next</Button>
+          <Label className="ml-2 text-sm">Page Size:</Label>
+          <select
+            className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={meta.pageSize}
+            onChange={e => setMeta(m => ({ ...m, pageSize: Number(e.target.value) || 10, page: 1 }))}
+          >
+            {[10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">

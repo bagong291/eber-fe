@@ -94,11 +94,12 @@ async function handleRequest<T>(
  */
 export function listProducts(
   filter: { type: string[]; application: string[] },
-  page: number
+  page: number,
+  pageSize: number = 10
 ): Promise<ApiResponse<ProductsListData>> {
   return handleRequest(
     apiClient.get<ApiWrapper<ProductsListData>>(`/products`, {
-      data: { filter, page },
+      params: { ...filter, page, pageSize },
     })
   )
 }

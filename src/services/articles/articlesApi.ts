@@ -82,7 +82,7 @@ async function handleRequest<T>(
     }
   } catch (err) {
     let message = 'Network or server error'
-    let empty = (null as unknown) as T
+    const empty = (null as unknown) as T
 
     if ((err as AxiosError).isAxiosError) {
       const axiosErr = err as AxiosError<{ message?: string }>
@@ -112,11 +112,20 @@ export function getArticle(id: number): Promise<ApiResponse<Article>> {
 }
 
 /**
- * Fetch all articles
+ * Fetch all articles, with optional search/filter
  */
-export function listArticles(): Promise<ApiResponse<Article[]>> {
+export interface ArticleListResponse {
+  data: Article[];
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+  };
+}
+
+export function listArticles(params?: Record<string, string | number | undefined>): Promise<ApiResponse<ArticleListResponse>> {
   return handleRequest(
-    apiClient.get<ApiWrapper<Article[]>>(`/articles`)
+    apiClient.get<ApiWrapper<ArticleListResponse>>(`/articles`, { params })
   )
 }
 

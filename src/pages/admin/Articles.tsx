@@ -1,5 +1,6 @@
 // src/pages/Articles.tsx
 import { useState, useEffect, ChangeEvent } from 'react'
+import { useDebounce } from '@/hooks/use-mobile' // Use debounce hook or implement one
 import {
   listArticles,
   getArticle,
@@ -10,6 +11,7 @@ import {
   ArticlePayload,
   UpdateArticlePayload,
   ArticleImagePayload,
+  ArticleListResponse,
 } from '@/services/articles/articlesApi'
 import { useAuthStore } from '@/store/authStore'
 import DataTable from '@/components/DataTable'
@@ -74,6 +76,9 @@ export default function Articles() {
   ]
 
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
+  const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 })
 
   // Filter articles by selected group
   const filteredArticles = selectedGroup === 'all'
@@ -125,14 +130,20 @@ export default function Articles() {
 
   useEffect(() => {
     fetchArticles()
-  }, [])
+  }, [debouncedSearch, selectedGroup, meta.page, meta.pageSize])
 
   async function fetchArticles() {
     setTableLoading(true)
-    const res = await listArticles()
+    const params: Record<string, string | number> = {}
+    if (debouncedSearch) params.search = debouncedSearch
+    if (selectedGroup !== 'all') params.group = selectedGroup
+    params.page = meta.page
+    params.pageSize = meta.pageSize
+    const res = await listArticles(params)
     setTableLoading(false)
     if (res.success) {
-      setArticles(res.data)
+      setArticles(res.data.data)
+      setMeta(res.data.meta)
     } else {
       toast({ title: res.message, variant: 'destructive' })
     }
@@ -267,7 +278,12 @@ export default function Articles() {
     <div>
       {/* Search bar and Group Filter in the same row */}
       <div className="flex items-center mb-4 space-x-4">
-        {/* DataTable's search bar will render here (max-w-sm for search bar) */}
+        <Input
+          className="max-w-sm"
+          placeholder="Search articles..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
         {/* Group Filter Dropdown */}
         <div className="flex items-center space-x-2">
           <Label htmlFor="group-filter">Group:</Label>
@@ -288,7 +304,7 @@ export default function Articles() {
         </div>
       </div>
       <DataTable
-        data={filteredArticles.map(article => ({ ...article, id: String(article.id) }))}
+        data={articles.map(article => ({ ...article, id: String(article.id) }))}
         columns={columns}
         onAdd={openAddDialog}
         onEdit={(item) => openEditDialog({ ...item, id: Number(item.id) } as Article)}
@@ -296,6 +312,24 @@ export default function Articles() {
         title="Articles"
         searchPlaceholder="Search articles..."
       />
+      {/* Pagination Controls - bottom, centered, modern UI */}
+      <div className="flex flex-col items-center justify-center mt-6">
+        <div className="flex items-center space-x-4 bg-white rounded-lg shadow px-4 py-2">
+          <Button size="sm" variant="outline" disabled={meta.page <= 1} onClick={() => setMeta(m => ({ ...m, page: m.page - 1 }))}>Prev</Button>
+          <span className="text-sm font-medium">Page {meta.page} of {Math.ceil(meta.total / meta.pageSize) || 1}</span>
+          <Button size="sm" variant="outline" disabled={meta.page >= Math.ceil(meta.total / meta.pageSize)} onClick={() => setMeta(m => ({ ...m, page: m.page + 1 }))}>Next</Button>
+          <Label className="ml-2 text-sm">Page Size:</Label>
+          <select
+            className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={meta.pageSize}
+            onChange={e => setMeta(m => ({ ...m, pageSize: Number(e.target.value) || 10, page: 1 }))}
+          >
+            {[10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl h-[90vh] overflow-y-auto">
