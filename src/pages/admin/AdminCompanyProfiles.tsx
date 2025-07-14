@@ -357,40 +357,40 @@ export default function AdminCompanyProfiles() {
                 <div className="text-sm mt-1 mb-2">{selectedCompany.data.p.description}</div>
               </div>
             )}
-            {/* --- Images --- */}
-            {selectedCompany.data?.images_1 && (
-              <>
-                <div className="font-semibold text-lg mt-6 mb-2">Images 1</div>
-                <ImageGrid images={selectedCompany.data.images_1} />
-              </>
-            )}
-            {selectedCompany.data?.images_2 && (
-              <>
-                <div className="font-semibold text-lg mt-6 mb-2">Images 2</div>
-                <ImageGrid images={selectedCompany.data.images_2} />
-              </>
-            )}
-            {selectedCompany.data?.images_3 && (
-              <>
-                <div className="font-semibold text-lg mt-6 mb-2">Images 3</div>
-                <ImageGrid images={selectedCompany.data.images_3} />
-              </>
-            )}
-            {/* --- Other Titles/Descriptions --- */}
+            {/* --- Rearranged Titles and Images --- */}
             {selectedCompany.data?.title_1 && (
               <div className="font-bold text-base mt-4">{selectedCompany.data.title_1}</div>
             )}
-            {selectedCompany.data?.description_1 && (
-              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_1}</div>
+            {selectedCompany.data?.images_1 && (
+              <>
+                <div className="font-semibold text-lg mt-2 mb-2">Images 1</div>
+                <ImageGrid images={selectedCompany.data.images_1} />
+              </>
             )}
             {selectedCompany.data?.title_2 && (
               <div className="font-bold text-base mt-4">{selectedCompany.data.title_2}</div>
             )}
-            {selectedCompany.data?.description_2 && (
-              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_2}</div>
+            {selectedCompany.data?.images_2 && (
+              <>
+                <div className="font-semibold text-lg mt-2 mb-2">Images 2</div>
+                <ImageGrid images={selectedCompany.data.images_2} />
+              </>
             )}
             {selectedCompany.data?.title_3 && (
               <div className="font-bold text-base mt-4">{selectedCompany.data.title_3}</div>
+            )}
+            {selectedCompany.data?.images_3 && (
+              <>
+                <div className="font-semibold text-lg mt-2 mb-2">Images 3</div>
+                <ImageGrid images={selectedCompany.data.images_3} />
+              </>
+            )}
+            {/* --- Descriptions --- */}
+            {selectedCompany.data?.description_1 && (
+              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_1}</div>
+            )}
+            {selectedCompany.data?.description_2 && (
+              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_2}</div>
             )}
             {selectedCompany.data?.description_3 && (
               <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_3}</div>
@@ -435,18 +435,17 @@ export default function AdminCompanyProfiles() {
               <Input placeholder="Title" value={formData.data.p?.title || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, title: e.target.value } } }))} className="mb-2" />
               <Input placeholder="Description" value={formData.data.p?.description || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, description: e.target.value } } }))} />
             </div>
+            {/* --- Rearranged Title/Image fields --- */}
+            <Input placeholder="Title 1" value={formData.data.title_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_1: e.target.value } }))} className="mb-2" />
             <ImageListEditor label="Images 1" value={formData.data.images_1 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_1: v } }))} />
+            <Input placeholder="Title 2" value={formData.data.title_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_2: e.target.value } }))} className="mb-2" />
             <ImageListEditor label="Images 2" value={formData.data.images_2 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_2: v } }))} />
+            <Input placeholder="Title 3" value={formData.data.title_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_3: e.target.value } }))} className="mb-2" />
             <ImageListEditor label="Images 3" value={formData.data.images_3 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_3: v } }))} />
-            <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
-              <div className="font-semibold mb-2">Other Titles/Descriptions</div>
-              <Input placeholder="Title 1" value={formData.data.title_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_1: e.target.value } }))} className="mb-2" />
-              <Input placeholder="Description 1" value={formData.data.description_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_1: e.target.value } }))} className="mb-2" />
-              <Input placeholder="Title 2" value={formData.data.title_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_2: e.target.value } }))} className="mb-2" />
-              <Input placeholder="Description 2" value={formData.data.description_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_2: e.target.value } }))} className="mb-2" />
-              <Input placeholder="Title 3" value={formData.data.title_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_3: e.target.value } }))} className="mb-2" />
-              <Input placeholder="Description 3" value={formData.data.description_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_3: e.target.value } }))} />
-            </div>
+            {/* --- Descriptions --- */}
+            <Input placeholder="Description 1" value={formData.data.description_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_1: e.target.value } }))} className="mb-2" />
+            <Input placeholder="Description 2" value={formData.data.description_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_2: e.target.value } }))} className="mb-2" />
+            <Input placeholder="Description 3" value={formData.data.description_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_3: e.target.value } }))} />
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : (editingItem ? 'Update' : 'Create')}</Button>
