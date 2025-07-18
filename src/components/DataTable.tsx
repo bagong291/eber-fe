@@ -8,7 +8,7 @@ import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 interface Column<T> {
   key: keyof T;
   label: string;
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (value: unknown, row: T) => React.ReactNode;
 }
 
 interface DataTableProps<T extends { id: string }> {
@@ -19,6 +19,8 @@ interface DataTableProps<T extends { id: string }> {
   onDelete: (id: string) => void;
   searchPlaceholder?: string;
   title?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 function DataTable<T extends { id: string }>({
@@ -28,9 +30,15 @@ function DataTable<T extends { id: string }>({
   onEdit,
   onDelete,
   searchPlaceholder = "Search...",
-  title
+  title,
+  searchValue,
+  onSearchChange
 }: DataTableProps<T>) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+
+  // Use external search if provided, otherwise use internal
+  const searchTerm = searchValue !== undefined ? searchValue : internalSearchTerm;
+  const setSearchTerm = onSearchChange || setInternalSearchTerm;
 
   const filteredData = data.filter((item) =>
     Object.values(item).some((value) =>

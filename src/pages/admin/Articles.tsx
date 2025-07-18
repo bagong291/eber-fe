@@ -278,12 +278,12 @@ export default function Articles() {
     <div>
       {/* Search bar and Group Filter in the same row */}
       <div className="flex items-center mb-4 space-x-4">
-        <Input
+        {/* <Input
           className="max-w-sm"
           placeholder="Search articles..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-        />
+        /> */}
         {/* Group Filter Dropdown */}
         <div className="flex items-center space-x-2">
           <Label htmlFor="group-filter">Group:</Label>

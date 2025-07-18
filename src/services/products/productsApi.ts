@@ -57,6 +57,16 @@ export interface ProductsListData {
 }
 
 /**
+ * Filter interface for products
+ */
+export interface ProductFilter {
+  search?: string
+  code?: string
+  type?: string[]
+  application?: string[]
+}
+
+/**
  * Shared try/catch for all ApiWrapper<T> calls
  */
 async function handleRequest<T>(
@@ -90,16 +100,24 @@ async function handleRequest<T>(
 }
 
 /**
- * List products (GET with body { filter, page })
+ * List products (GET with query parameters)
  */
 export function listProducts(
-  filter: { type: string[]; application: string[] },
-  page: number,
+  filter: ProductFilter = {},
+  page: number = 1,
   pageSize: number = 10
 ): Promise<ApiResponse<ProductsListData>> {
+  const params: Record<string, string | number | string[]> = { page, pageSize }
+  
+  // Add filter parameters
+  if (filter.search) params.search = filter.search
+  if (filter.code) params.code = filter.code
+  if (filter.type && Array.isArray(filter.type) && filter.type.length > 0) params.type = filter.type
+  if (filter.application && Array.isArray(filter.application) && filter.application.length > 0) params.application = filter.application
+
   return handleRequest(
     apiClient.get<ApiWrapper<ProductsListData>>(`/products`, {
-      params: { ...filter, page, pageSize },
+      params,
     })
   )
 }

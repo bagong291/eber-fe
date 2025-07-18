@@ -32,17 +32,17 @@ const AdminLayout = () => {
 
   const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-    { path: '/admin/hero-banners', icon: Image, label: 'Hero Banners' },
-    { path: '/admin/about-us', icon: Info, label: 'About Us' },
-    { path: '/admin/corporate-entities', icon: Building, label: 'Corporate Entities' },
+    // { path: '/admin/hero-banners', icon: Image, label: 'Hero Banners' },
+    // { path: '/admin/about-us', icon: Info, label: 'About Us' },
+    // { path: '/admin/corporate-entities', icon: Building, label: 'Corporate Entities' },
     { path: '/admin/company-profiles-admin', icon: Building, label: 'Admin Company Profiles' },
-    { path: '/admin/certifications', icon: Award, label: 'Certifications' },
-    { path: '/admin/product-categories', icon: FolderTree, label: 'Product Categories' },
+    // { path: '/admin/certifications', icon: Award, label: 'Certifications' },
+    // { path: '/admin/product-categories', icon: FolderTree, label: 'Product Categories' },
     { path: '/admin/products', icon: Package, label: 'Products' },
     { path: '/admin/articles', icon: FileText, label: 'Articles' },
     { path: '/admin/careers', icon: Briefcase, label: 'Careers' },
-    { path: '/admin/applications', icon: Users, label: 'Applications' },
-    { path: '/admin/contact-info', icon: Phone, label: 'Contact Info' },
+    // { path: '/admin/applications', icon: Users, label: 'Applications' },
+    // { path: '/admin/contact-info', icon: Phone, label: 'Contact Info' },
   ];
 
   return (

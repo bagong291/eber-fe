@@ -33,7 +33,8 @@ export default function AdminCompanyProfiles() {
     coordinate: '',
     address: '',
     description: '',
-    data: {}
+    data: {},
+    main_image: '' // <-- add default
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +79,7 @@ export default function AdminCompanyProfiles() {
 
   function openAddDialog() {
     setEditingItem(null);
-    setFormData({ name: '', location: '', coordinate: '', address: '', description: '', data: {} });
+    setFormData({ name: '', location: '', coordinate: '', address: '', description: '', data: {}, main_image: '' });
     setIsDialogOpen(true);
   }
 
@@ -324,6 +325,16 @@ export default function AdminCompanyProfiles() {
       <div className="flex-1 p-8">
         {selectedCompany ? (
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
+            {/* Main Image Display */}
+            {selectedCompany.main_image && (
+              <div className="flex justify-center mb-6">
+                <img
+                  src={selectedCompany.main_image.startsWith('http') ? selectedCompany.main_image : (import.meta.env.VITE_IMAGE_URL + selectedCompany.main_image)}
+                  alt="Main"
+                  className="w-64 h-64 object-cover rounded shadow border"
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">{selectedCompany.name}</h2>
               <div className="space-x-2">
@@ -407,6 +418,42 @@ export default function AdminCompanyProfiles() {
             <DialogTitle>{editingItem ? 'Edit Company' : 'Add Company'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 p-2">
+            {/* Main Image Upload */}
+            <div>
+              <Label>Main Image</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="text"
+                  placeholder="Main image URL"
+                  value={formData.main_image || ''}
+                  onChange={e => setFormData(f => ({ ...f, main_image: e.target.value }))}
+                  className="w-96"
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={async e => {
+                    if (e.target.files && e.target.files[0]) {
+                      try {
+                        const url = await uploadCompanyProfileImage(e.target.files[0]);
+                        setFormData(f => ({ ...f, main_image: url }));
+                        toast({ title: 'Main image uploaded' });
+                      } catch {
+                        toast({ title: 'Failed to upload main image', variant: 'destructive' });
+                      }
+                    }
+                  }}
+                  className="w-64"
+                />
+                {formData.main_image && (
+                  <img
+                    src={formData.main_image.startsWith('http') ? formData.main_image : (import.meta.env.VITE_IMAGE_URL + formData.main_image)}
+                    alt="Preview"
+                    className="w-16 h-16 object-cover rounded border"
+                  />
+                )}
+              </div>
+            </div>
             <div>
               <Label>Name</Label>
               <Input value={formData.name} onChange={e => setFormData(f => ({ ...f, name: e.target.value }))} required />

@@ -10,6 +10,7 @@ import {
   ProductsListData,
 } from '@/services/products/productsApi'
 import DataTable from '@/components/DataTable'
+import ProductFilters from '@/components/ProductFilters'
 import {
   Dialog,
   DialogContent,
@@ -91,13 +92,12 @@ export default function Products() {
 
   async function fetchProducts() {
     setTableLoading(true)
-    const params: Record<string, string | number | string[]> = {}
-    if (debouncedSearch) params.search = debouncedSearch
-    if (typeFilter.length) params.type = typeFilter
-    if (appFilter.length) params.application = appFilter
-    params.page = meta.page
-    params.pageSize = meta.pageSize
-    const res = await listProducts(params as any, meta.page, meta.pageSize)
+    const filter: Record<string, string | string[]> = {}
+    if (debouncedSearch) filter.search = debouncedSearch
+    if (typeFilter.length) filter.type = typeFilter
+    if (appFilter.length) filter.application = appFilter
+    
+    const res = await listProducts(filter, meta.page, meta.pageSize)
     setTableLoading(false)
     if (res.success) {
       const d = res.data as ProductsListData
@@ -140,8 +140,8 @@ export default function Products() {
       type: item.type,
     }
 
-    // call deleteProduct(item, payload) per your API signature
-    const res = await deleteProduct(item, payload)
+    // call deleteProduct with id and payload
+    const res = await deleteProduct(item.id, payload)
     setTableLoading(false)
 
     if (res.success) {
@@ -180,8 +180,24 @@ export default function Products() {
     }
   }
 
+  const handleClearAllFilters = () => {
+    setTypeFilter([])
+    setAppFilter([])
+  }
+
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Filter Section */}
+      <ProductFilters
+        filterOptions={filterOptions}
+        selectedTypes={typeFilter}
+        selectedApplications={appFilter}
+        onTypeChange={setTypeFilter}
+        onApplicationChange={setAppFilter}
+        onClearAll={handleClearAllFilters}
+        isLoading={isTableLoading}
+      />
+
       <DataTable
         data={products.map(product => ({ ...product, id: String(product.id) }))}
         columns={columns}
@@ -190,6 +206,8 @@ export default function Products() {
         onDelete={id => handleDelete({ ...products.find(p => String(p.id) === id)!, id: Number(id) } as Product)}
         title="Products"
         searchPlaceholder="Search products..."
+        searchValue={search}
+        onSearchChange={setSearch}
       />
       {/* Pagination Controls - bottom, centered, modern UI */}
       <div className="flex flex-col items-center justify-center mt-6">
@@ -264,7 +282,6 @@ export default function Products() {
                   setFormData((f) => ({ ...f, performanceFeature: v }))
                 }
                 placeholder="Describe performance features..."
-                className="min-h-[150px]"
               />
             </div>
 
