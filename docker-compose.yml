@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  admin-eber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: admin-eber
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    networks:
+      - admin-network
+
+  # Uncomment and configure the following if you need a backend service
+  # backend:
+  #   image: your-backend-image
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - NODE_ENV=development
+  #   networks:
+  #     - admin-network
+
+networks:
+  admin-network:
+    driver: bridge
