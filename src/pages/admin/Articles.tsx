@@ -15,6 +15,7 @@ import {
 } from '@/services/articles/articlesApi'
 import { useAuthStore } from '@/store/authStore'
 import DataTable from '@/components/DataTable'
+import ArticleFilters from '@/components/ArticleFilters'
 import {
   Dialog,
   DialogContent,
@@ -56,11 +57,13 @@ export default function Articles() {
     body: string
     author: string
     group: string
+    status: boolean
   }>({
     title: '',
     body: '',
     author: currentUsername,
     group: '',
+    status: true,
   })
   const [newImage, setNewImage] = useState<ArticleImagePayload | null>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -76,6 +79,7 @@ export default function Articles() {
   ]
 
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
   const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 })
@@ -99,6 +103,19 @@ export default function Articles() {
             : 'bg-gray-100 text-gray-600'
         }`}>
           {group || 'No Group'}
+        </span>
+      ),
+    },
+    {
+      key: 'status' as const,
+      label: 'Status',
+      render: (value: boolean) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          value 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {value ? 'Active' : 'Inactive'}
         </span>
       ),
     },
@@ -130,13 +147,14 @@ export default function Articles() {
 
   useEffect(() => {
     fetchArticles()
-  }, [debouncedSearch, selectedGroup, meta.page, meta.pageSize])
+  }, [debouncedSearch, selectedGroup, statusFilter, meta.page, meta.pageSize])
 
   async function fetchArticles() {
     setTableLoading(true)
     const params: Record<string, string | number> = {}
     if (debouncedSearch) params.search = debouncedSearch
     if (selectedGroup !== 'all') params.group = selectedGroup
+    if (statusFilter !== 'all') params.status = statusFilter === 'active' ? 'true' : 'false'
     params.page = meta.page
     params.pageSize = meta.pageSize
     const res = await listArticles(params)
@@ -151,7 +169,7 @@ export default function Articles() {
 
   function openAddDialog() {
     setEditingItem(null)
-    setFormData({ title: '', body: '', author: currentUsername, group: '' })
+    setFormData({ title: '', body: '', author: currentUsername, group: '', status: true })
     setNewImage(null)
     setPdfFile(null)
     setDialogOpen(true)
@@ -171,6 +189,7 @@ export default function Articles() {
       body: res.data.body,
       author: res.data.author,
       group: res.data.group || '',
+      status: res.data.status,
     })
     setNewImage(null)
     setPdfFile(null)
@@ -271,38 +290,29 @@ export default function Articles() {
   const previewSrc = newImage
     ? `data:image/${newImage.extension};base64,${newImage.data}`
     : editingItem?.image
-    ? `${import.meta.env.VITE_IMAGE_URL || ''}${editingItem.image}`
+    ? `${import.meta.env.VITE_IMAGE_URL || ''}/${editingItem.image}`
     : null
 
+  const handleClearAllFilters = () => {
+    setSearch('')
+    setSelectedGroup('all')
+    setStatusFilter('all')
+  }
+
   return (
-    <div>
-      {/* Search bar and Group Filter in the same row */}
-      <div className="flex items-center mb-4 space-x-4">
-        {/* <Input
-          className="max-w-sm"
-          placeholder="Search articles..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        /> */}
-        {/* Group Filter Dropdown */}
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="group-filter">Group:</Label>
-          <Select
-            value={selectedGroup}
-            onValueChange={setSelectedGroup}
-          >
-            <SelectTrigger className="w-48" id="group-filter">
-              <SelectValue placeholder="All Groups" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Groups</SelectItem>
-              {groupOptions.map((group) => (
-                <SelectItem key={group} value={group}>{group}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Filter Section */}
+      <ArticleFilters
+        search={search}
+        selectedGroup={selectedGroup}
+        statusFilter={statusFilter}
+        groupOptions={groupOptions}
+        onSearchChange={setSearch}
+        onGroupChange={setSelectedGroup}
+        onStatusChange={setStatusFilter}
+        onClearAll={handleClearAllFilters}
+        isLoading={isTableLoading}
+      />
       <DataTable
         data={articles.map(article => ({ ...article, id: String(article.id) }))}
         columns={columns}
@@ -452,6 +462,25 @@ export default function Articles() {
                   <span className="text-xs text-gray-500">Write the main content of the article here.</span>
                 </div>
               )}
+
+              {/* Status Field */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="status" className="font-semibold text-base">Status</Label>
+                <Select
+                  value={formData.status ? 'active' : 'inactive'}
+                  onValueChange={(value: 'active' | 'inactive') =>
+                    setFormData((f) => ({ ...f, status: value === 'active' }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-3 pt-4 border-t pt-6 mt-4">

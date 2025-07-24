@@ -35,6 +35,7 @@ export interface AdminCompanyProfileEntity {
   description: string;
   data: AdminCompanyProfileData;
   main_image?: string;
+  status?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

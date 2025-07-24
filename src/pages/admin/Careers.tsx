@@ -12,6 +12,7 @@ import {
   CareerListResponse,
 } from '@/services/career/careerApi'
 import DataTable from '@/components/DataTable'
+import CareerFilters from '@/components/CareerFilters'
 import {
   Dialog,
   DialogContent,
@@ -58,9 +59,11 @@ const Careers = () => {
     location: '',
     type: 'fulltime',
     description: '',
+    status: true,
   })
 
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const debouncedSearch = useDebounce(search, 400)
   const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 })
 
@@ -69,6 +72,19 @@ const Careers = () => {
     { key: 'position' as keyof Career, label: 'Position' },
     { key: 'location' as keyof Career, label: 'Location' },
     { key: 'type' as keyof Career, label: 'Type' },
+    {
+      key: 'status' as keyof Career,
+      label: 'Status',
+      render: (value: boolean) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          value 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {value ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
     {
       key: 'createdAt' as keyof Career,
       label: 'Created At',
@@ -83,12 +99,13 @@ const Careers = () => {
 
   useEffect(() => {
     fetchCareers()
-  }, [debouncedSearch, meta.page, meta.pageSize])
+  }, [debouncedSearch, statusFilter, meta.page, meta.pageSize])
 
   const fetchCareers = async () => {
     setTableLoading(true)
     const params: Record<string, string | number> = {}
     if (debouncedSearch) params.search = debouncedSearch
+    if (statusFilter !== 'all') params.status = statusFilter === 'active' ? 'true' : 'false'
     params.page = meta.page
     params.pageSize = meta.pageSize
     const res = await listCareers(params)
@@ -108,6 +125,7 @@ const Careers = () => {
       location: '',
       type: 'fulltime',
       description: '',
+      status: true,
     })
     setDialogOpen(true)
   }
@@ -124,6 +142,7 @@ const Careers = () => {
         location: res.data.location,
         type: res.data.type,
         description: res.data.description,
+        status: res.data.status,
       })
       setDialogOpen(true)
     } else {
@@ -176,17 +195,22 @@ const Careers = () => {
     }
   }
 
+  const handleClearAllFilters = () => {
+    setSearch('')
+    setStatusFilter('all')
+  }
+
   return (
-    <div>
-      {/* Search bar */}
-      <div className="flex items-center mb-4 space-x-4">
-        <Input
-          className="max-w-sm"
-          placeholder="Search job openings..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-      </div>
+    <div className="space-y-6">
+      {/* Filter Section */}
+      <CareerFilters
+        search={search}
+        statusFilter={statusFilter}
+        onSearchChange={setSearch}
+        onStatusChange={setStatusFilter}
+        onClearAll={handleClearAllFilters}
+        isLoading={isTableLoading}
+      />
       <DataTable
         data={careers.map(career => ({ ...career, id: String(career.id) }))}
         columns={columns}
@@ -270,6 +294,23 @@ const Careers = () => {
                       <SelectItem value="fulltime">Full-time</SelectItem>
                       <SelectItem value="parttime">Part-time</SelectItem>
                       <SelectItem value="internship">Internship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status ? 'active' : 'inactive'}
+                    onValueChange={(value: 'active' | 'inactive') =>
+                      setFormData((f) => ({ ...f, status: value === 'active' }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

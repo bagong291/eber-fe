@@ -38,6 +38,7 @@ export interface Article {
   author: string
   group: string | null
   image: string // Changed from ArticleImage to string (URL)
+  status: boolean
   createdAt: string
   updatedAt: string
 }

@@ -15,8 +15,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-mobile';
+
+// Update the type for AdminCompanyProfileDataBox.data to include id
+// If the type is imported, add a local type for use in BoxEditor
+
+type InfoBoxRow = { id: string; name: string; data: string };
+type InfoBoxDataBox = { column?: number; data: InfoBoxRow[] };
 
 export default function AdminCompanyProfiles() {
   const [companies, setCompanies] = useState<AdminCompanyProfileEntity[]>([]);
@@ -33,8 +46,12 @@ export default function AdminCompanyProfiles() {
     coordinate: '',
     address: '',
     description: '',
-    data: {},
-    main_image: '' // <-- add default
+    data: {
+      box_1: { column: 2, data: [] },
+      box_2: { column: 2, data: [] },
+    },
+    main_image: '', // <-- add default
+    status: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +96,19 @@ export default function AdminCompanyProfiles() {
 
   function openAddDialog() {
     setEditingItem(null);
-    setFormData({ name: '', location: '', coordinate: '', address: '', description: '', data: {}, main_image: '' });
+    setFormData({
+      name: '',
+      location: '',
+      coordinate: '',
+      address: '',
+      description: '',
+      data: {
+        box_1: { column: 2, data: [] },
+        box_2: { column: 2, data: [] },
+      },
+      main_image: '',
+      status: true
+    });
     setIsDialogOpen(true);
   }
 
@@ -188,19 +217,19 @@ export default function AdminCompanyProfiles() {
   }
 
   // Add these helper components for dynamic form fields
-  function BoxEditor({ label, value, onChange }: { label: string; value: AdminCompanyProfileDataBox; onChange: (v: AdminCompanyProfileDataBox) => void }) {
+  function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDataBox; onChange: (v: InfoBoxDataBox) => void }) {
     const handleColumnChange = (col: number) => {
       onChange({ ...value, column: col });
     };
-    const handleItemChange = (idx: number, field: 'name' | 'data', val: string) => {
-      const newData = (value.data as { name: string; data: string }[]).map((item, i) => i === idx ? { ...item, [field]: val } : item);
+    const handleItemChange = (uid: string, field: 'name' | 'data', val: string) => {
+      const newData = (value.data as InfoBoxRow[]).map((item) => item.id === uid ? { ...item, [field]: val } : item);
       onChange({ ...value, data: newData });
     };
     const addItem = () => {
-      onChange({ ...value, data: [...(value.data || []), { name: '', data: '' }] });
+      onChange({ ...value, data: [...(value.data || []), { id: crypto.randomUUID(), name: '', data: '' }] });
     };
-    const removeItem = (idx: number) => {
-      onChange({ ...value, data: (value.data as { name: string; data: string }[]).filter((_, i) => i !== idx) });
+    const removeItem = (uid: string) => {
+      onChange({ ...value, data: (value.data as InfoBoxRow[]).filter((item) => item.id !== uid) });
     };
     return (
       <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
@@ -209,11 +238,11 @@ export default function AdminCompanyProfiles() {
           <Label className="mr-2">Columns:</Label>
           <Input type="number" min={1} max={4} value={value.column || 2} onChange={e => handleColumnChange(Number(e.target.value))} className="w-20" />
         </div>
-        {(value.data || []).map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 mb-2">
-            <Input placeholder="Name" value={item.name} onChange={e => handleItemChange(idx, 'name', e.target.value)} className="w-40" />
-            <Input placeholder="Data" value={item.data} onChange={e => handleItemChange(idx, 'data', e.target.value)} className="flex-1" />
-            <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(idx)}>Remove</Button>
+        {(value.data || []).map((item) => (
+          <div key={item.id} className="flex items-center gap-2 mb-2">
+            <Input placeholder="Name" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} className="w-40" />
+            <Input placeholder="Data" value={item.data} onChange={e => handleItemChange(item.id, 'data', e.target.value)} className="flex-1" />
+            <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(item.id)}>Remove</Button>
           </div>
         ))}
         <Button type="button" size="sm" onClick={addItem}>Add Row</Button>
@@ -274,6 +303,16 @@ export default function AdminCompanyProfiles() {
         <Button type="button" size="sm" onClick={addItem}>Add Image</Button>
       </div>
     );
+  }
+
+  // Helper to add id to box data rows if missing, but keep the type as AdminCompanyProfileDataBox
+  function migrateBoxRows(box: AdminCompanyProfileDataBox | undefined): AdminCompanyProfileDataBox & { data: { name: string; data: string; id: string }[] } {
+    return {
+      column: box?.column ?? 2,
+      data: ((box?.data || []).map((item: { name: string; data: string; id?: string }) =>
+        item.id ? item : { ...item, id: crypto.randomUUID() }
+      )) as { name: string; data: string; id: string }[],
+    };
   }
 
   return (
@@ -347,6 +386,16 @@ export default function AdminCompanyProfiles() {
             <div className="mb-2"><span className="font-semibold">Location:</span> {selectedCompany.location}</div>
             <div className="mb-2"><span className="font-semibold">Coordinate:</span> {selectedCompany.coordinate}</div>
             <div className="mb-2"><span className="font-semibold">Description:</span> {selectedCompany.description}</div>
+            <div className="mb-2">
+              <span className="font-semibold">Status:</span> 
+              <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                selectedCompany.status 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {selectedCompany.status ? 'Active' : 'Inactive'}
+              </span>
+            </div>
             {/* --- Info Boxes --- */}
             {selectedCompany.data?.box_1 && (
               <>
@@ -413,7 +462,7 @@ export default function AdminCompanyProfiles() {
       </div>
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit Company' : 'Add Company'}</DialogTitle>
           </DialogHeader>
@@ -474,9 +523,26 @@ export default function AdminCompanyProfiles() {
               <Label>Description</Label>
               <Input value={formData.description} onChange={e => setFormData(f => ({ ...f, description: e.target.value }))} required />
             </div>
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={formData.status ? 'active' : 'inactive'}
+                onValueChange={(value: 'active' | 'inactive') =>
+                  setFormData(f => ({ ...f, status: value === 'active' }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {/* --- Dynamic Nested Data Sections --- */}
-            <BoxEditor label="Info Box 1" value={formData.data.box_1 || { column: 2, data: [] }} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_1: v } }))} />
-            <BoxEditor label="Info Box 2" value={formData.data.box_2 || { column: 2, data: [] }} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_2: v } }))} />
+            <BoxEditor label="Info Box 1" value={migrateBoxRows(formData.data.box_1)} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_1: { column: v.column, data: v.data.map(({ id, ...rest }) => rest) } } }))} />
+            <BoxEditor label="Info Box 2" value={migrateBoxRows(formData.data.box_2)} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_2: { column: v.column, data: v.data.map(({ id, ...rest }) => rest) } } }))} />
             <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
               <div className="font-semibold mb-2">Product Application</div>
               <Input placeholder="Title" value={formData.data.p?.title || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, title: e.target.value } } }))} className="mb-2" />

@@ -20,6 +20,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import WysiwygEditor from '@/components/WysiwygEditor'
 import { toast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-mobile' // Use debounce hook or implement one
@@ -52,6 +59,7 @@ export default function Products() {
 
   const [typeFilter, setTypeFilter] = useState<string[]>([])
   const [appFilter, setAppFilter] = useState<string[]>([])
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
 
@@ -66,6 +74,7 @@ export default function Products() {
     application: '',
     performanceFeature: '',
     type: '',
+    status: true,
   })
 
   const columns = [
@@ -74,6 +83,19 @@ export default function Products() {
     { key: 'application' as const, label: 'Application' },
     { key: 'performanceFeature' as const, label: 'Feature' },
     { key: 'type' as const, label: 'Type' },
+    {
+      key: 'status' as const,
+      label: 'Status',
+      render: (value: boolean) => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          value 
+            ? 'bg-green-100 text-green-800' 
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {value ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
     {
       key: 'createdAt' as const,
       label: 'Created At',
@@ -88,7 +110,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts()
-  }, [debouncedSearch, meta.page, meta.pageSize, typeFilter, appFilter])
+  }, [debouncedSearch, meta.page, meta.pageSize, typeFilter, appFilter, statusFilter])
 
   async function fetchProducts() {
     setTableLoading(true)
@@ -96,6 +118,7 @@ export default function Products() {
     if (debouncedSearch) filter.search = debouncedSearch
     if (typeFilter.length) filter.type = typeFilter
     if (appFilter.length) filter.application = appFilter
+    if (statusFilter !== 'all') filter.status = statusFilter === 'active' ? 'true' : 'false'
     
     const res = await listProducts(filter, meta.page, meta.pageSize)
     setTableLoading(false)
@@ -111,7 +134,7 @@ export default function Products() {
 
   function openAddDialog() {
     setEditingItem(null)
-    setFormData({ code: '', application: '', performanceFeature: '', type: '' })
+    setFormData({ code: '', application: '', performanceFeature: '', type: '', status: true })
     setDialogOpen(true)
   }
 
@@ -122,6 +145,7 @@ export default function Products() {
       application: item.application,
       performanceFeature: item.performanceFeature,
       type: item.type,
+      status: item.status,
     })
     setDialogOpen(true)
   }
@@ -138,6 +162,7 @@ export default function Products() {
       application: item.application,
       performanceFeature: item.performanceFeature,
       type: item.type,
+      status: item.status,
     }
 
     // call deleteProduct with id and payload
@@ -183,6 +208,8 @@ export default function Products() {
   const handleClearAllFilters = () => {
     setTypeFilter([])
     setAppFilter([])
+    setStatusFilter('all')
+    setSearch('')
   }
 
   return (
@@ -192,8 +219,12 @@ export default function Products() {
         filterOptions={filterOptions}
         selectedTypes={typeFilter}
         selectedApplications={appFilter}
+        statusFilter={statusFilter}
+        search={search}
         onTypeChange={setTypeFilter}
         onApplicationChange={setAppFilter}
+        onStatusChange={setStatusFilter}
+        onSearchChange={setSearch}
         onClearAll={handleClearAllFilters}
         isLoading={isTableLoading}
       />
@@ -283,6 +314,24 @@ export default function Products() {
                 }
                 placeholder="Describe performance features..."
               />
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status ? 'active' : 'inactive'}
+                onValueChange={(value: 'active' | 'inactive') =>
+                  setFormData((f) => ({ ...f, status: value === 'active' }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

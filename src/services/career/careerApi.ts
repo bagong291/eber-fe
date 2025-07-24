@@ -28,6 +28,7 @@ export interface Career {
   location: string
   type: 'fulltime' | 'parttime' | 'internship' | string
   description: string
+  status: boolean
   createdAt: string
   updatedAt: string
 }

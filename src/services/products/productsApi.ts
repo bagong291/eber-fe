@@ -28,6 +28,7 @@ export interface Product {
   application: string
   performanceFeature: string
   type: string
+  status: boolean
   createdAt: string
   updatedAt: string
 }
