@@ -112,8 +112,8 @@ function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDa
 
 function ImageListEditor({ label, value, onChange }: { label: string; value: AdminCompanyProfileImage[]; onChange: (v: AdminCompanyProfileImage[]) => void }) {
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
-  const handleItemChange = (idx: number, field: keyof AdminCompanyProfileImage, val: string) => {
-    const newData = value.map((item, i) => i === idx ? { ...item, [field]: val } : item);
+  const handleTitleChange = (idx: number, val: string) => {
+    const newData = value.map((item, i) => i === idx ? { ...item, title: val } : item);
     onChange(newData);
   };
   const addItem = () => {
@@ -128,6 +128,10 @@ function ImageListEditor({ label, value, onChange }: { label: string; value: Adm
     setTimeout(() => {
       if (dialog) dialog.scrollTop = scrollTop;
     }, 0);
+  };
+  const deleteImage = (idx: number) => {
+    const newData = value.map((item, i) => i === idx ? { ...item, url: '' } : item);
+    onChange(newData);
   };
   const handleFileChange = async (idx: number, file: File) => {
     setUploadingIdx(idx);
@@ -147,16 +151,23 @@ function ImageListEditor({ label, value, onChange }: { label: string; value: Adm
       {(value || []).map((item, idx) => (
         <div key={idx} className="flex items-center gap-2 mb-2">
           <div className="flex flex-col gap-1">
-            <Input placeholder="Image URL" value={item.url} onChange={e => handleItemChange(idx, 'url', e.target.value)} className="w-64" />
-            <div className="flex items-center gap-2 mt-1">
-              <Input type="file" accept="image/*" onChange={e => {
-                if (e.target.files && e.target.files[0]) handleFileChange(idx, e.target.files[0]);
-              }} className="w-48" />
-              {uploadingIdx === idx && <span className="text-xs text-blue-600 animate-pulse">Uploading...</span>}
-              {item.url && <img src={import.meta.env.VITE_IMAGE_URL+item.url} alt="Preview" className="w-12 h-12 object-cover rounded border ml-2" />}
-            </div>
+            {item.url ? (
+              // Show image and delete button when image exists
+              <div className="flex items-center gap-2">
+                <img src={import.meta.env.VITE_IMAGE_URL+item.url} alt="Preview" className="w-16 h-16 object-cover rounded border" />
+                <Button type="button" size="sm" variant="outline" onClick={() => deleteImage(idx)}>Delete Image</Button>
+              </div>
+            ) : (
+              // Show upload button when no image
+              <div className="flex items-center gap-2">
+                <Input type="file" accept="image/*" onChange={e => {
+                  if (e.target.files && e.target.files[0]) handleFileChange(idx, e.target.files[0]);
+                }} className="w-48" />
+                {uploadingIdx === idx && <span className="text-xs text-blue-600 animate-pulse">Uploading...</span>}
+              </div>
+            )}
           </div>
-          <Input placeholder="Title" value={item.title} onChange={e => handleItemChange(idx, 'title', e.target.value)} className="w-40" />
+          <Input placeholder="Title" value={item.title} onChange={e => handleTitleChange(idx, e.target.value)} className="w-40" />
           <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(idx)}>Remove</Button>
         </div>
       ))}
@@ -531,35 +542,43 @@ export default function AdminCompanyProfiles() {
             <div>
               <Label>Main Image</Label>
               <div className="flex items-center gap-4">
-                <Input
-                  type="text"
-                  placeholder="Main image URL"
-                  value={formData.main_image || ''}
-                  onChange={e => setFormData(f => ({ ...f, main_image: e.target.value }))}
-                  className="w-96"
-                />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={async e => {
-                    if (e.target.files && e.target.files[0]) {
-                      try {
-                        const url = await uploadCompanyProfileImage(e.target.files[0]);
-                        setFormData(f => ({ ...f, main_image: url }));
-                        toast({ title: 'Main image uploaded' });
-                      } catch {
-                        toast({ title: 'Failed to upload main image', variant: 'destructive' });
-                      }
-                    }
-                  }}
-                  className="w-64"
-                />
-                {formData.main_image && (
-                  <img
-                    src={formData.main_image.startsWith('http') ? formData.main_image : (import.meta.env.VITE_IMAGE_URL + formData.main_image)}
-                    alt="Preview"
-                    className="w-16 h-16 object-cover rounded border"
-                  />
+                {formData.main_image ? (
+                  // Show image and delete button when image exists
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={formData.main_image.startsWith('http') ? formData.main_image : (import.meta.env.VITE_IMAGE_URL + formData.main_image)}
+                      alt="Preview"
+                      className="w-16 h-16 object-cover rounded border"
+                    />
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setFormData(f => ({ ...f, main_image: '' }))}
+                    >
+                      Delete Image
+                    </Button>
+                  </div>
+                ) : (
+                  // Show upload button when no image
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={async e => {
+                        if (e.target.files && e.target.files[0]) {
+                          try {
+                            const url = await uploadCompanyProfileImage(e.target.files[0]);
+                            setFormData(f => ({ ...f, main_image: url }));
+                            toast({ title: 'Main image uploaded' });
+                          } catch {
+                            toast({ title: 'Failed to upload main image', variant: 'destructive' });
+                          }
+                        }
+                      }}
+                      className="w-64"
+                    />
+                  </div>
                 )}
               </div>
             </div>
