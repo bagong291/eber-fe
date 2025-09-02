@@ -11,6 +11,7 @@ import {
   AdminCompanyProfileImage, // <-- add import
   AdminCompanyProfileDataBox // <-- add import
 } from '@/services/adminCompanyProfileApi';
+import MultiLanguageInput from '@/components/MultiLanguageInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +29,15 @@ import { useDebounce } from '@/hooks/use-mobile';
 // Update the type for AdminCompanyProfileDataBox.data to include id
 // If the type is imported, add a local type for use in BoxEditor
 
-type InfoBoxRow = { id: string; name: string; data: string };
+type InfoBoxRow = { 
+  id: string; 
+  name: string; 
+  data: string;
+  name_en?: string;
+  name_id?: string;
+  data_en?: string;
+  data_id?: string;
+};
 type InfoBoxDataBox = { column?: number; data: InfoBoxRow[] };
 
 // Helper components moved outside to prevent re-creation on every render
@@ -66,22 +75,41 @@ function ImageGrid({ images }: { images: AdminCompanyProfileImage[] }) {
   );
 }
 
-function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDataBox; onChange: (v: InfoBoxDataBox) => void }) {
+function BoxEditor({ label, value, onChange, currentLanguage }: { label: string; value: InfoBoxDataBox; onChange: (v: InfoBoxDataBox) => void; currentLanguage: 'en' | 'id' }) {
   const handleColumnChange = useCallback((col: number) => {
     onChange({ ...value, column: col });
   }, [value, onChange]);
 
   const handleItemChange = useCallback((uid: string, field: 'name' | 'data', val: string) => {
-    const newData = (value.data as InfoBoxRow[]).map((item) => 
-      item.id === uid ? { ...item, [field]: val } : item
-    );
+    const newData = (value.data as InfoBoxRow[]).map((item) => {
+      if (item.id === uid) {
+        if (field === 'name') {
+          return { 
+            ...item, 
+            [`name_${currentLanguage}`]: val,
+            name: val // Always update the legacy field with current value regardless of language
+          };
+        } else {
+          return { 
+            ...item, 
+            [`data_${currentLanguage}`]: val,
+            data: val // Always update the legacy field with current value regardless of language
+          };
+        }
+      }
+      return item;
+    });
     onChange({ ...value, data: newData });
-  }, [value, onChange]);
+  }, [value, onChange, currentLanguage]);
 
   const addItem = useCallback(() => {
     onChange({ 
       ...value, 
-      data: [...(value.data || []), { id: crypto.randomUUID(), name: '', data: '' }] 
+      data: [...(value.data || []), { 
+        id: crypto.randomUUID(), 
+        name: '', name_en: '', name_id: '',
+        data: '', data_en: '', data_id: ''
+      }] 
     });
   }, [value, onChange]);
 
@@ -91,21 +119,150 @@ function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDa
       data: (value.data as InfoBoxRow[]).filter((item) => item.id !== uid) 
     });
   }, [value, onChange]);
+  
   return (
-    <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
-      <div className="font-semibold mb-2">{label}</div>
-      <div className="flex items-center mb-2">
-        <Label className="mr-2">Columns:</Label>
-        <Input type="number" min={1} max={4} value={value.column || 2} onChange={e => handleColumnChange(Number(e.target.value))} className="w-20" />
-      </div>
-      {(value.data || []).map((item) => (
-        <div key={item.id} className="flex items-center gap-2 mb-2">
-          <Input placeholder="Name" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} className="w-40" />
-          <Input placeholder="Data" value={item.data} onChange={e => handleItemChange(item.id, 'data', e.target.value)} className="flex-1" />
-          <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(item.id)}>Remove</Button>
+    <div className="space-y-6">
+      {/* Header Section with better visual hierarchy */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-3 h-6 bg-blue-500 rounded-sm"></div>
+          <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
+          <span className="text-sm text-gray-500">({(value.data || []).length} items)</span>
         </div>
-      ))}
-      <Button type="button" size="sm" onClick={addItem}>Add Row</Button>
+        
+        {/* Column Configuration */}
+        <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-lg">
+          <Label className="text-sm font-medium text-gray-700">Grid Layout:</Label>
+          <select
+            value={value.column || 2}
+            onChange={e => handleColumnChange(Number(e.target.value))}
+            className="text-sm border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+          >
+            <option value={1}>1 Column</option>
+            <option value={2}>2 Columns</option>
+            <option value={3}>3 Columns</option>
+            <option value={4}>4 Columns</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Info Box Items */}
+      <div className="space-y-4">
+        {(value.data || []).length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="mx-auto w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <p className="text-gray-500 text-sm mb-4">No items yet. Add your first info box item to get started.</p>
+            <Button type="button" variant="outline" onClick={addItem}>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add First Item
+            </Button>
+          </div>
+        ) : (
+          (value.data || []).map((item, index) => (
+            <div key={item.id} className="group relative bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
+              {/* Item Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">
+                    {index + 1}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">Info Box Item</span>
+                </div>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => removeItem(item.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </Button>
+              </div>
+
+              {/* Content Fields */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                    Title
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                      </svg>
+                      {currentLanguage === 'en' ? 'EN' : 'ID'}
+                    </span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      value={currentLanguage === 'en' 
+                        ? (item.name_en || item.name || '') 
+                        : (item.name_id || item.name_en || item.name || '')
+                      }
+                      onChange={e => handleItemChange(item.id, 'name', e.target.value)}
+                      placeholder={currentLanguage === 'en' ? "Enter title in English (e.g., Our Vision)" : "Masukkan judul dalam Bahasa Indonesia (contoh: Visi Kami)"}
+                      className="w-full pr-12 border-l-4 border-l-blue-400"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                      {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                    Description
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                      </svg>
+                      {currentLanguage === 'en' ? 'EN' : 'ID'}
+                    </span>
+                  </Label>
+                  <div className="relative">
+                    <textarea
+                      value={currentLanguage === 'en' 
+                        ? (item.data_en || item.data || '') 
+                        : (item.data_id || item.data_en || item.data || '')
+                      }
+                      onChange={e => handleItemChange(item.id, 'data', e.target.value)}
+                      placeholder={currentLanguage === 'en' ? "Enter detailed description in English..." : "Masukkan deskripsi detail dalam Bahasa Indonesia..."}
+                      className="w-full min-h-[100px] px-3 py-2 pr-12 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical border-l-4 border-l-blue-400"
+                      rows={3}
+                    />
+                    <div className="absolute right-3 top-3 text-xs font-medium text-blue-600">
+                      {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add New Item Button */}
+      {(value.data || []).length > 0 && (
+        <div className="flex justify-center pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={addItem}
+            className="border-dashed border-2 hover:border-blue-500 hover:text-blue-600 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Another Item
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -195,6 +352,7 @@ export default function AdminCompanyProfiles() {
   const [selectedCompany, setSelectedCompany] = useState<AdminCompanyProfileEntity | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminCompanyProfileEntity | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'id'>('en'); // Global language state
   const [formData, setFormData] = useState<AdminCompanyProfileEntity>({
     name: '',
     location: '',
@@ -533,11 +691,40 @@ export default function AdminCompanyProfiles() {
       </div>
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit Company' : 'Add Company'}</DialogTitle>
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          <DialogHeader className="sticky top-0 z-10 bg-white pt-6 pb-4 border-b -mx-6 px-6">
+            <div className="flex items-center justify-between">
+              <DialogTitle>{editingItem ? 'Edit Company' : 'Add Company'}</DialogTitle>
+              
+              {/* Global Language Toggle - Sticky positioned */}
+              <div className="flex items-center space-x-3 bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentLanguage('en')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                    currentLanguage === 'en'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🇺🇸 English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentLanguage('id')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
+                    currentLanguage === 'id'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🇮🇩 Indonesia
+                </button>
+              </div>
+            </div>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 p-2">
+          <div className="flex-1 overflow-y-auto px-6">
+            <form onSubmit={handleSubmit} className="space-y-4 py-6">
             {/* Main Image Upload */}
             <div>
               <Label>Main Image</Label>
@@ -598,9 +785,35 @@ export default function AdminCompanyProfiles() {
               <Label>Address</Label>
               <Input value={formData.address} onChange={e => setFormData(f => ({ ...f, address: e.target.value }))} required />
             </div>
+            {/* Global Language-Aware Description */}
             <div>
-              <Label>Description</Label>
-              <Input value={formData.description} onChange={e => setFormData(f => ({ ...f, description: e.target.value }))} required />
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Description *
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  value={currentLanguage === 'en' ? (formData.description_en || '') : (formData.description_id || '')}
+                  onChange={e => {
+                    if (currentLanguage === 'en') {
+                      setFormData(f => ({ ...f, description_en: e.target.value }));
+                    } else {
+                      setFormData(f => ({ ...f, description_id: e.target.value }));
+                    }
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter company description in English" : "Masukkan deskripsi perusahaan dalam Bahasa Indonesia"}
+                  required
+                  className="w-full pr-12 border-l-4 border-l-blue-400"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
             </div>
             <div>
               <Label>Status</Label>
@@ -623,34 +836,293 @@ export default function AdminCompanyProfiles() {
             <BoxEditor 
               label="Info Box 1" 
               value={migratedBox1} 
-              onChange={handleBox1Change} 
+              onChange={handleBox1Change}
+              currentLanguage={currentLanguage}
             />
             <BoxEditor 
               label="Info Box 2" 
               value={migratedBox2} 
-              onChange={handleBox2Change} 
+              onChange={handleBox2Change}
+              currentLanguage={currentLanguage}
             />
             <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
               <div className="font-semibold mb-2">Product Application</div>
-              <Input placeholder="Title" value={formData.data.p?.title || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, title: e.target.value } } }))} className="mb-2" />
-              <Input placeholder="Description" value={formData.data.p?.description || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, description: e.target.value } } }))} />
+              {/* Global Language-Aware Product Application Title */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                  Product Application Title
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                    </svg>
+                    {currentLanguage === 'en' ? 'EN' : 'ID'}
+                  </span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    value={currentLanguage === 'en' ? (formData.data.p?.title_en || formData.data.p?.title || '') : (formData.data.p?.title_id || formData.data.p?.title || '')}
+                    onChange={e => {
+                      const newValue = e.target.value;
+                      setFormData(f => ({ 
+                        ...f, 
+                        data: { 
+                          ...f.data, 
+                          p: { 
+                            ...f.data.p, 
+                            [`title_${currentLanguage}`]: newValue
+                          } 
+                        } 
+                      }));
+                    }}
+                    placeholder={currentLanguage === 'en' ? "Enter product application title in English" : "Masukkan judul aplikasi produk dalam Bahasa Indonesia"}
+                    className="w-full pr-12 border-l-4 border-l-blue-400"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                    {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                  </div>
+                </div>
+              </div>
+              {/* Global Language-Aware Product Application Description */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                  Product Application Description
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                    </svg>
+                    {currentLanguage === 'en' ? 'EN' : 'ID'}
+                  </span>
+                </Label>
+                <div className="relative">
+                  <textarea
+                    value={currentLanguage === 'en' ? (formData.data.p?.description_en || formData.data.p?.description || '') : (formData.data.p?.description_id || formData.data.p?.description || '')}
+                    onChange={e => {
+                      const newValue = e.target.value;
+                      setFormData(f => ({ 
+                        ...f, 
+                        data: { 
+                          ...f.data, 
+                          p: { 
+                            ...f.data.p, 
+                            [`description_${currentLanguage}`]: newValue
+                          } 
+                        } 
+                      }));
+                    }}
+                    placeholder={currentLanguage === 'en' ? "Enter product application description in English" : "Masukkan deskripsi aplikasi produk dalam Bahasa Indonesia"}
+                    className="w-full min-h-[100px] px-3 py-2 pr-12 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical border-l-4 border-l-blue-400"
+                    rows={3}
+                  />
+                  <div className="absolute right-3 top-3 text-xs font-medium text-blue-600">
+                    {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                  </div>
+                </div>
+              </div>
             </div>
-            {/* --- Rearranged Title/Image fields --- */}
-            <Input placeholder="Title 1" value={formData.data.title_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_1: e.target.value } }))} className="mb-2" />
+            {/* --- Global Language-Aware Titles and Images --- */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Title 1
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  value={currentLanguage === 'en' ? (formData.data.title_1_en || formData.data.title_1 || '') : (formData.data.title_1_id || formData.data.title_1 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`title_1_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter title 1 in English" : "Masukkan judul 1 dalam Bahasa Indonesia"}
+                  className="w-full pr-12 border-l-4 border-l-blue-400"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
             <ImageListEditor label="Images 1" value={formData.data.images_1 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_1: v } }))} />
-            <Input placeholder="Title 2" value={formData.data.title_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_2: e.target.value } }))} className="mb-2" />
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Title 2
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  value={currentLanguage === 'en' ? (formData.data.title_2_en || formData.data.title_2 || '') : (formData.data.title_2_id || formData.data.title_2 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`title_2_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter title 2 in English" : "Masukkan judul 2 dalam Bahasa Indonesia"}
+                  className="w-full pr-12 border-l-4 border-l-blue-400"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
             <ImageListEditor label="Images 2" value={formData.data.images_2 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_2: v } }))} />
-            <Input placeholder="Title 3" value={formData.data.title_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, title_3: e.target.value } }))} className="mb-2" />
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Title 3
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  value={currentLanguage === 'en' ? (formData.data.title_3_en || formData.data.title_3 || '') : (formData.data.title_3_id || formData.data.title_3 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`title_3_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter title 3 in English" : "Masukkan judul 3 dalam Bahasa Indonesia"}
+                  className="w-full pr-12 border-l-4 border-l-blue-400"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
             <ImageListEditor label="Images 3" value={formData.data.images_3 || []} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, images_3: v } }))} />
-            {/* --- Descriptions --- */}
-            <Input placeholder="Description 1" value={formData.data.description_1 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_1: e.target.value } }))} className="mb-2" />
-            <Input placeholder="Description 2" value={formData.data.description_2 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_2: e.target.value } }))} className="mb-2" />
-            <Input placeholder="Description 3" value={formData.data.description_3 || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, description_3: e.target.value } }))} />
+            {/* --- Global Language-Aware Descriptions --- */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Description 1
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <textarea
+                  value={currentLanguage === 'en' ? (formData.data.description_1_en || formData.data.description_1 || '') : (formData.data.description_1_id || formData.data.description_1 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`description_1_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter description 1 in English" : "Masukkan deskripsi 1 dalam Bahasa Indonesia"}
+                  className="w-full min-h-[100px] px-3 py-2 pr-12 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical border-l-4 border-l-blue-400"
+                  rows={3}
+                />
+                <div className="absolute right-3 top-3 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Description 2
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <textarea
+                  value={currentLanguage === 'en' ? (formData.data.description_2_en || formData.data.description_2 || '') : (formData.data.description_2_id || formData.data.description_2 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`description_2_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter description 2 in English" : "Masukkan deskripsi 2 dalam Bahasa Indonesia"}
+                  className="w-full min-h-[100px] px-3 py-2 pr-12 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical border-l-4 border-l-blue-400"
+                  rows={3}
+                />
+                <div className="absolute right-3 top-3 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Description 3
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <textarea
+                  value={currentLanguage === 'en' ? (formData.data.description_3_en || formData.data.description_3 || '') : (formData.data.description_3_id || formData.data.description_3 || '')}
+                  onChange={e => {
+                    const newValue = e.target.value;
+                    setFormData(f => ({ 
+                      ...f, 
+                      data: { 
+                        ...f.data, 
+                        [`description_3_${currentLanguage}`]: newValue
+                      } 
+                    }));
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter description 3 in English" : "Masukkan deskripsi 3 dalam Bahasa Indonesia"}
+                  className="w-full min-h-[100px] px-3 py-2 pr-12 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical border-l-4 border-l-blue-400"
+                  rows={3}
+                />
+                <div className="absolute right-3 top-3 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
+            </div>
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : (editingItem ? 'Update' : 'Create')}</Button>
             </div>
-          </form>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

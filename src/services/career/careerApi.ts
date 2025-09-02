@@ -27,7 +27,11 @@ export interface Career {
   position: string
   location: string
   type: 'fulltime' | 'parttime' | 'internship' | string
-  description: string
+  // Multi-language job description
+  description_en: string
+  description_id: string
+  // Legacy field (for backward compatibility)
+  description?: string
   status: boolean
   createdAt: string
   updatedAt: string
@@ -36,7 +40,18 @@ export interface Career {
 /**
  * Payload you send when creating or updating
  */
-export type CareerPayload = Omit<Career, 'id' | 'createdAt' | 'updatedAt'>
+export type CareerPayload = Omit<Career, 'id' | 'createdAt' | 'updatedAt' | 'description'> & {
+  description_en: string
+  description_id: string
+}
+
+/**
+ * Payload for updating careers (optional fields)
+ */
+export type UpdateCareerPayload = Omit<Career, 'id' | 'createdAt' | 'updatedAt' | 'description'> & {
+  description_en?: string
+  description_id?: string
+}
 
 /**
  * Shared try/catch for all calls that return ApiWrapper<T>

@@ -13,6 +13,7 @@ import {
 } from '@/services/career/careerApi'
 import DataTable from '@/components/DataTable'
 import CareerFilters from '@/components/CareerFilters'
+import MultiLanguageInput from '@/components/MultiLanguageInput'
 import {
   Dialog,
   DialogContent,
@@ -58,7 +59,8 @@ const Careers = () => {
     position: '',
     location: '',
     type: 'fulltime',
-    description: '',
+    description_en: '',
+    description_id: '',
     status: true,
   })
 
@@ -124,7 +126,8 @@ const Careers = () => {
       position: '',
       location: '',
       type: 'fulltime',
-      description: '',
+      description_en: '',
+      description_id: '',
       status: true,
     })
     setDialogOpen(true)
@@ -141,7 +144,8 @@ const Careers = () => {
         position: res.data.position,
         location: res.data.location,
         type: res.data.type,
-        description: res.data.description,
+        description_en: res.data.description_en || res.data.description || '',
+        description_id: res.data.description_id || res.data.description || '',
         status: res.data.status,
       })
       setDialogOpen(true)
@@ -170,6 +174,13 @@ const Careers = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+
+    // Validation for multi-language job description
+    if (!formData.description_en.trim() || !formData.description_id.trim()) {
+      toast({ title: 'Please fill in both English and Indonesian job descriptions', variant: 'destructive' })
+      setSubmitting(false)
+      return
+    }
 
     let res
     if (editingItem) {
@@ -316,16 +327,27 @@ const Careers = () => {
                 </div>
               </div>
 
-              <div>
-                <Label>Job Description</Label>
-                <WysiwygEditor
-                  value={formData.description}
-                  onChange={(value) =>
-                    setFormData((f) => ({ ...f, description: value }))
-                  }
-                  placeholder="Enter job description..."
-                />
-              </div>
+              {/* Multi-Language Job Description */}
+              <MultiLanguageInput
+                label="Job Description"
+                type="wysiwyg"
+                values={{
+                  en: formData.description_en,
+                  id: formData.description_id
+                }}
+                onChange={(values) => 
+                  setFormData(f => ({ 
+                    ...f, 
+                    description_en: values.en, 
+                    description_id: values.id 
+                  }))
+                }
+                required
+                placeholder={{
+                  en: "Enter job description in English...",
+                  id: "Masukkan deskripsi pekerjaan dalam Bahasa Indonesia..."
+                }}
+              />
 
               <div className="flex justify-end space-x-2">
                 <Button

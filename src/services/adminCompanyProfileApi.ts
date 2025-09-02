@@ -11,19 +11,51 @@ export interface AdminCompanyProfileImage {
 }
 
 export interface AdminCompanyProfileData {
+  // Multi-language descriptions
+  description_1_en?: string;
+  description_1_id?: string;
+  description_2_en?: string;
+  description_2_id?: string;
+  description_3_en?: string;
+  description_3_id?: string;
+  
+  // Legacy descriptions (for backward compatibility)
   description_1?: string;
-  box_1?: AdminCompanyProfileDataBox;
   description_2?: string;
-  box_2?: AdminCompanyProfileDataBox;
-  p?: { title: string; description: string };
-  title_1?: string;
-  images_1?: AdminCompanyProfileImage[];
-  title_2?: string;
-  images_2?: AdminCompanyProfileImage[];
-  title_3?: string;
   description_3?: string;
+  
+  box_1?: AdminCompanyProfileDataBox;
+  box_2?: AdminCompanyProfileDataBox;
+  
+  // Multi-language Product Application
+  p?: { 
+    title_en?: string;
+    title_id?: string;
+    description_en?: string;
+    description_id?: string;
+    // Legacy fields
+    title?: string; 
+    description?: string;
+  };
+  
+  // Multi-language titles
+  title_1_en?: string;
+  title_1_id?: string;
+  title_2_en?: string;
+  title_2_id?: string;
+  title_3_en?: string;
+  title_3_id?: string;
+  
+  // Legacy titles (for backward compatibility)
+  title_1?: string;
+  title_2?: string;
+  title_3?: string;
+  
+  images_1?: AdminCompanyProfileImage[];
+  images_2?: AdminCompanyProfileImage[];
   images_3?: AdminCompanyProfileImage[];
-  [key: string]: string | number | AdminCompanyProfileDataBox | AdminCompanyProfileImage[] | { title: string; description: string } | undefined;
+  
+  [key: string]: any;
 }
 
 export interface AdminCompanyProfileEntity {
@@ -32,7 +64,11 @@ export interface AdminCompanyProfileEntity {
   location: string;
   coordinate: string;
   address: string;
-  description: string;
+  // Multi-language main description
+  description_en?: string;
+  description_id?: string;
+  // Legacy field (for backward compatibility)
+  description?: string;
   data: AdminCompanyProfileData;
   main_image?: string;
   status?: boolean;

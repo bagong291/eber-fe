@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import DataTable from '@/components/DataTable'
 import ArticleFilters from '@/components/ArticleFilters'
+import MultiLanguageInput from '@/components/MultiLanguageInput'
 import {
   Dialog,
   DialogContent,
@@ -53,14 +54,18 @@ export default function Articles() {
 
   const [editingItem, setEditingItem] = useState<Article | null>(null)
   const [formData, setFormData] = useState<{
-    title: string
-    body: string
+    title_en: string
+    title_id: string
+    body_en: string
+    body_id: string
     author: string
     group: string
     status: boolean
   }>({
-    title: '',
-    body: '',
+    title_en: '',
+    title_id: '',
+    body_en: '',
+    body_id: '',
     author: currentUsername,
     group: '',
     status: true,
@@ -91,7 +96,20 @@ export default function Articles() {
 
   const columns = [
     { key: 'id' as const, label: 'ID' },
-    { key: 'title' as const, label: 'Title' },
+    { 
+      key: 'title_en' as const, 
+      label: 'Title (EN)',
+      render: (title_en: string, item: Article) => (
+        <div className="space-y-1">
+          <div className="text-sm font-medium">
+            🇺🇸 {title_en || item.title || 'No English title'}
+          </div>
+          <div className="text-xs text-gray-600">
+            🇮🇩 {item.title_id || item.title || 'No Indonesian title'}
+          </div>
+        </div>
+      )
+    },
     { key: 'author' as const, label: 'Author' },
     { 
       key: 'group' as const, 
@@ -169,9 +187,19 @@ export default function Articles() {
 
   function openAddDialog() {
     setEditingItem(null)
-    setFormData({ title: '', body: '', author: currentUsername, group: '', status: true })
+    setFormData({ 
+      title_en: '', 
+      title_id: '', 
+      body_en: '', 
+      body_id: '', 
+      author: currentUsername, 
+      group: '', 
+      status: true 
+    })
     setNewImage(null)
     setPdfFile(null)
+    setPdfPayload(null)
+    setExistingPdfUrl(null)
     setDialogOpen(true)
   }
 
@@ -185,8 +213,10 @@ export default function Articles() {
     }
     setEditingItem(res.data)
     setFormData({
-      title: res.data.title,
-      body: res.data.body,
+      title_en: res.data.title_en || res.data.title || '',
+      title_id: res.data.title_id || res.data.title || '',
+      body_en: res.data.body_en || res.data.body || '',
+      body_id: res.data.body_id || res.data.body || '',
       author: res.data.author,
       group: res.data.group || '',
       status: res.data.status,
@@ -251,9 +281,22 @@ export default function Articles() {
     e.preventDefault()
     setSubmitting(true)
 
+    // Validation for multi-language fields
+    if (!formData.title_en.trim() || !formData.title_id.trim()) {
+      toast({ title: 'Please fill in both English and Indonesian titles', variant: 'destructive' })
+      setSubmitting(false)
+      return
+    }
+    
+    if (formData.group !== 'Eber Magazine' && (!formData.body_en.trim() || !formData.body_id.trim())) {
+      toast({ title: 'Please fill in both English and Indonesian body content', variant: 'destructive' })
+      setSubmitting(false)
+      return
+    }
+
     let res
     if (editingItem) {
-      const updatePayload: UpdateArticlePayload & { pdf?: { name: string; extension: string; data: string } } = {
+      const updatePayload: UpdateArticlePayload = {
         ...formData,
         ...(newImage && { image: newImage }),
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
@@ -270,7 +313,7 @@ export default function Articles() {
         setSubmitting(false)
         return
       }
-      const createPayload: ArticlePayload & { pdf?: { name: string; extension: string; data: string } } = {
+      const createPayload: ArticlePayload = {
         ...formData,
         image: newImage,
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
@@ -403,18 +446,27 @@ export default function Articles() {
                 )}
               </div>
 
-              {/* Title Field */}
-              <div className="flex flex-col space-y-2">
-                <Label htmlFor="title" className="font-semibold text-base">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData((f) => ({ ...f, title: e.target.value }))
-                  }
-                  required
-                />
-              </div>
+              {/* Multi-Language Title Field */}
+              <MultiLanguageInput
+                label="Title"
+                type="text"
+                values={{
+                  en: formData.title_en,
+                  id: formData.title_id
+                }}
+                onChange={(values) => 
+                  setFormData(f => ({ 
+                    ...f, 
+                    title_en: values.en, 
+                    title_id: values.id 
+                  }))
+                }
+                required
+                placeholder={{
+                  en: "Enter article title in English",
+                  id: "Masukkan judul artikel dalam Bahasa Indonesia"
+                }}
+              />
               {/* PDF upload for Eber Magazine, directly under Title */}
               {formData.group === 'Eber Magazine' && (
                 <div className="flex flex-col space-y-3 border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50 shadow-sm mt-2">
@@ -448,19 +500,28 @@ export default function Articles() {
                 </div>
               )}
 
-              {/* Body Field (hidden for Eber Magazine) */}
+              {/* Multi-Language Body Field (hidden for Eber Magazine) */}
               {formData.group !== 'Eber Magazine' && (
-                <div className="flex flex-col space-y-2">
-                  <Label className="font-semibold text-base">Body</Label>
-                  <WysiwygEditor
-                    value={formData.body}
-                    onChange={(v) =>
-                      setFormData((f) => ({ ...f, body: v }))
-                    }
-                    placeholder="Write your article..."
-                  />
-                  <span className="text-xs text-gray-500">Write the main content of the article here.</span>
-                </div>
+                <MultiLanguageInput
+                  label="Body Content"
+                  type="wysiwyg"
+                  values={{
+                    en: formData.body_en,
+                    id: formData.body_id
+                  }}
+                  onChange={(values) => 
+                    setFormData(f => ({ 
+                      ...f, 
+                      body_en: values.en, 
+                      body_id: values.id 
+                    }))
+                  }
+                  required
+                  placeholder={{
+                    en: "Write your article content in English...",
+                    id: "Tulis konten artikel dalam Bahasa Indonesia..."
+                  }}
+                />
               )}
 
               {/* Status Field */}

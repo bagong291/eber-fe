@@ -33,11 +33,18 @@ export interface ArticleImage {
  */
 export interface Article {
   id: number
-  title: string
-  body: string
+  // Multi-language fields
+  title_en: string
+  title_id: string
+  body_en: string
+  body_id: string
+  // Legacy fields (for backward compatibility)
+  title?: string
+  body?: string
   author: string
   group: string | null
   image: string // Changed from ArticleImage to string (URL)
+  pdf?: string
   status: boolean
   createdAt: string
   updatedAt: string
@@ -55,15 +62,25 @@ export interface ArticleImagePayload {
 /**
  * Payload you send when creating or updating
  */
-export type ArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image'> & {
+export type ArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image' | 'title' | 'body'> & {
+  title_en: string
+  title_id: string
+  body_en: string
+  body_id: string
   image: ArticleImagePayload
+  pdf?: { name: string; extension: string; data: string }
 }
 
 /**
  * Payload for updating articles (image is optional)
  */
-export type UpdateArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image'> & {
+export type UpdateArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image' | 'title' | 'body'> & {
+  title_en?: string
+  title_id?: string
+  body_en?: string
+  body_id?: string
   image?: ArticleImagePayload
+  pdf?: { name: string; extension: string; data: string }
 }
 
 /**
