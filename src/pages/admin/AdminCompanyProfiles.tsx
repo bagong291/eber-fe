@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   listAdminCompanyProfiles,
   getAdminCompanyProfile,
@@ -31,6 +31,150 @@ import { useDebounce } from '@/hooks/use-mobile';
 type InfoBoxRow = { id: string; name: string; data: string };
 type InfoBoxDataBox = { column?: number; data: InfoBoxRow[] };
 
+// Helper components moved outside to prevent re-creation on every render
+function InfoBoxGrid({ box }: { box: AdminCompanyProfileDataBox }) {
+  if (!box || !Array.isArray(box.data)) return null;
+  return (
+    <div className={`grid grid-cols-${box.column || 2} gap-4 mb-4`}>
+      {box.data.map((item, idx) => (
+        <div key={idx} className="bg-gray-50 rounded p-3 shadow-sm">
+          <div className="font-semibold text-sm mb-1">{item.name}</div>
+          <div className="text-sm whitespace-pre-line">{item.data}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ImageGrid({ images }: { images: AdminCompanyProfileImage[] }) {
+  if (!images || !Array.isArray(images)) return null;
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+      {images.map((img, idx) => {
+        let src = img.url;
+        if (src && !src.startsWith('http')) {
+          src = `${import.meta.env.VITE_IMAGE_URL || ''}${src}`;
+        }
+        return (
+          <div key={idx} className="flex flex-col items-center">
+            <img src={src} alt={img.title} className="w-28 h-28 object-cover rounded shadow" />
+            <div className="text-xs text-center mt-2">{img.title}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDataBox; onChange: (v: InfoBoxDataBox) => void }) {
+  const handleColumnChange = useCallback((col: number) => {
+    onChange({ ...value, column: col });
+  }, [value, onChange]);
+
+  const handleItemChange = useCallback((uid: string, field: 'name' | 'data', val: string) => {
+    const newData = (value.data as InfoBoxRow[]).map((item) => 
+      item.id === uid ? { ...item, [field]: val } : item
+    );
+    onChange({ ...value, data: newData });
+  }, [value, onChange]);
+
+  const addItem = useCallback(() => {
+    onChange({ 
+      ...value, 
+      data: [...(value.data || []), { id: crypto.randomUUID(), name: '', data: '' }] 
+    });
+  }, [value, onChange]);
+
+  const removeItem = useCallback((uid: string) => {
+    onChange({ 
+      ...value, 
+      data: (value.data as InfoBoxRow[]).filter((item) => item.id !== uid) 
+    });
+  }, [value, onChange]);
+  return (
+    <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
+      <div className="font-semibold mb-2">{label}</div>
+      <div className="flex items-center mb-2">
+        <Label className="mr-2">Columns:</Label>
+        <Input type="number" min={1} max={4} value={value.column || 2} onChange={e => handleColumnChange(Number(e.target.value))} className="w-20" />
+      </div>
+      {(value.data || []).map((item) => (
+        <div key={item.id} className="flex items-center gap-2 mb-2">
+          <Input placeholder="Name" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} className="w-40" />
+          <Input placeholder="Data" value={item.data} onChange={e => handleItemChange(item.id, 'data', e.target.value)} className="flex-1" />
+          <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(item.id)}>Remove</Button>
+        </div>
+      ))}
+      <Button type="button" size="sm" onClick={addItem}>Add Row</Button>
+    </div>
+  );
+}
+
+function ImageListEditor({ label, value, onChange }: { label: string; value: AdminCompanyProfileImage[]; onChange: (v: AdminCompanyProfileImage[]) => void }) {
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const handleItemChange = (idx: number, field: keyof AdminCompanyProfileImage, val: string) => {
+    const newData = value.map((item, i) => i === idx ? { ...item, [field]: val } : item);
+    onChange(newData);
+  };
+  const addItem = () => {
+    onChange([...(value || []), { url: '', title: '' }]);
+  };
+  const removeItem = (idx: number) => {
+    // Preserve scroll position
+    const dialog = document.querySelector('.DialogContent') as HTMLElement | null;
+    const scrollTop = dialog ? dialog.scrollTop : 0;
+    onChange(value.filter((_, i) => i !== idx));
+    // Restore scroll position after state update
+    setTimeout(() => {
+      if (dialog) dialog.scrollTop = scrollTop;
+    }, 0);
+  };
+  const handleFileChange = async (idx: number, file: File) => {
+    setUploadingIdx(idx);
+    try {
+      const url = await uploadCompanyProfileImage(file);
+      const newData = value.map((item, i) => i === idx ? { ...item, url } : item);
+      onChange(newData);
+      toast({ title: 'Image uploaded' });
+    } catch (e) {
+      toast({ title: 'Failed to upload image', variant: 'destructive' });
+    }
+    setUploadingIdx(null);
+  };
+  return (
+    <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
+      <div className="font-semibold mb-2">{label}</div>
+      {(value || []).map((item, idx) => (
+        <div key={idx} className="flex items-center gap-2 mb-2">
+          <div className="flex flex-col gap-1">
+            <Input placeholder="Image URL" value={item.url} onChange={e => handleItemChange(idx, 'url', e.target.value)} className="w-64" />
+            <div className="flex items-center gap-2 mt-1">
+              <Input type="file" accept="image/*" onChange={e => {
+                if (e.target.files && e.target.files[0]) handleFileChange(idx, e.target.files[0]);
+              }} className="w-48" />
+              {uploadingIdx === idx && <span className="text-xs text-blue-600 animate-pulse">Uploading...</span>}
+              {item.url && <img src={import.meta.env.VITE_IMAGE_URL+item.url} alt="Preview" className="w-12 h-12 object-cover rounded border ml-2" />}
+            </div>
+          </div>
+          <Input placeholder="Title" value={item.title} onChange={e => handleItemChange(idx, 'title', e.target.value)} className="w-40" />
+          <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(idx)}>Remove</Button>
+        </div>
+      ))}
+      <Button type="button" size="sm" onClick={addItem}>Add Image</Button>
+    </div>
+  );
+}
+
+// Helper to add id to box data rows if missing, but keep the type as AdminCompanyProfileDataBox
+function migrateBoxRows(box: AdminCompanyProfileDataBox | undefined): AdminCompanyProfileDataBox & { data: { name: string; data: string; id: string }[] } {
+  return {
+    column: box?.column ?? 2,
+    data: ((box?.data || []).map((item: { name: string; data: string; id?: string }) =>
+      item.id ? item : { ...item, id: crypto.randomUUID() }
+    )) as { name: string; data: string; id: string }[],
+  };
+}
+
 export default function AdminCompanyProfiles() {
   const [companies, setCompanies] = useState<AdminCompanyProfileEntity[]>([]);
   const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 });
@@ -55,6 +199,47 @@ export default function AdminCompanyProfiles() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Store migrated box data separately to prevent re-migration on every render
+  const [migratedBox1, setMigratedBox1] = useState<InfoBoxDataBox & { data: InfoBoxRow[] }>(() => 
+    migrateBoxRows(formData.data.box_1)
+  );
+  const [migratedBox2, setMigratedBox2] = useState<InfoBoxDataBox & { data: InfoBoxRow[] }>(() => 
+    migrateBoxRows(formData.data.box_2)
+  );
+
+  // Create stable onChange handlers that update both migrated state and formData
+  const handleBox1Change = useCallback((v: InfoBoxDataBox & { data: InfoBoxRow[] }) => {
+    // Update migrated state for immediate UI response
+    setMigratedBox1(v);
+    // Update formData for persistence
+    setFormData(f => ({ 
+      ...f, 
+      data: { 
+        ...f.data, 
+        box_1: { 
+          column: v.column, 
+          data: v.data.map(({ id, ...rest }) => rest) 
+        } 
+      } 
+    }));
+  }, []);
+
+  const handleBox2Change = useCallback((v: InfoBoxDataBox & { data: InfoBoxRow[] }) => {
+    // Update migrated state for immediate UI response
+    setMigratedBox2(v);
+    // Update formData for persistence
+    setFormData(f => ({ 
+      ...f, 
+      data: { 
+        ...f.data, 
+        box_2: { 
+          column: v.column, 
+          data: v.data.map(({ id, ...rest }) => rest) 
+        } 
+      } 
+    }));
+  }, []);
 
   useEffect(() => {
     fetchCompanies();
@@ -96,7 +281,7 @@ export default function AdminCompanyProfiles() {
 
   function openAddDialog() {
     setEditingItem(null);
-    setFormData({
+    const newFormData = {
       name: '',
       location: '',
       coordinate: '',
@@ -108,13 +293,20 @@ export default function AdminCompanyProfiles() {
       },
       main_image: '',
       status: true
-    });
+    };
+    setFormData(newFormData);
+    // Reset migrated box states
+    setMigratedBox1(migrateBoxRows(newFormData.data.box_1));
+    setMigratedBox2(migrateBoxRows(newFormData.data.box_2));
     setIsDialogOpen(true);
   }
 
   async function openEditDialog(item: AdminCompanyProfileEntity) {
     setEditingItem(item);
     setFormData(item);
+    // Initialize migrated box states with current data
+    setMigratedBox1(migrateBoxRows(item.data.box_1));
+    setMigratedBox2(migrateBoxRows(item.data.box_2));
     setIsDialogOpen(true);
   }
 
@@ -181,139 +373,7 @@ export default function AdminCompanyProfiles() {
     setIsSubmitting(false);
   }
 
-  // Add these helper components at the top of the file
-  function InfoBoxGrid({ box }: { box: AdminCompanyProfileDataBox }) {
-    if (!box || !Array.isArray(box.data)) return null;
-    return (
-      <div className={`grid grid-cols-${box.column || 2} gap-4 mb-4`}>
-        {box.data.map((item, idx) => (
-          <div key={idx} className="bg-gray-50 rounded p-3 shadow-sm">
-            <div className="font-semibold text-sm mb-1">{item.name}</div>
-            <div className="text-sm whitespace-pre-line">{item.data}</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
-  function ImageGrid({ images }: { images: AdminCompanyProfileImage[] }) {
-    if (!images || !Array.isArray(images)) return null;
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-        {images.map((img, idx) => {
-          let src = img.url;
-          if (src && !src.startsWith('http')) {
-            src = `${import.meta.env.VITE_IMAGE_URL || ''}${src}`;
-          }
-          return (
-            <div key={idx} className="flex flex-col items-center">
-              <img src={src} alt={img.title} className="w-28 h-28 object-cover rounded shadow" />
-              <div className="text-xs text-center mt-2">{img.title}</div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // Add these helper components for dynamic form fields
-  function BoxEditor({ label, value, onChange }: { label: string; value: InfoBoxDataBox; onChange: (v: InfoBoxDataBox) => void }) {
-    const handleColumnChange = (col: number) => {
-      onChange({ ...value, column: col });
-    };
-    const handleItemChange = (uid: string, field: 'name' | 'data', val: string) => {
-      const newData = (value.data as InfoBoxRow[]).map((item) => item.id === uid ? { ...item, [field]: val } : item);
-      onChange({ ...value, data: newData });
-    };
-    const addItem = () => {
-      onChange({ ...value, data: [...(value.data || []), { id: crypto.randomUUID(), name: '', data: '' }] });
-    };
-    const removeItem = (uid: string) => {
-      onChange({ ...value, data: (value.data as InfoBoxRow[]).filter((item) => item.id !== uid) });
-    };
-    return (
-      <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
-        <div className="font-semibold mb-2">{label}</div>
-        <div className="flex items-center mb-2">
-          <Label className="mr-2">Columns:</Label>
-          <Input type="number" min={1} max={4} value={value.column || 2} onChange={e => handleColumnChange(Number(e.target.value))} className="w-20" />
-        </div>
-        {(value.data || []).map((item) => (
-          <div key={item.id} className="flex items-center gap-2 mb-2">
-            <Input placeholder="Name" value={item.name} onChange={e => handleItemChange(item.id, 'name', e.target.value)} className="w-40" />
-            <Input placeholder="Data" value={item.data} onChange={e => handleItemChange(item.id, 'data', e.target.value)} className="flex-1" />
-            <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(item.id)}>Remove</Button>
-          </div>
-        ))}
-        <Button type="button" size="sm" onClick={addItem}>Add Row</Button>
-      </div>
-    );
-  }
-
-  function ImageListEditor({ label, value, onChange }: { label: string; value: AdminCompanyProfileImage[]; onChange: (v: AdminCompanyProfileImage[]) => void }) {
-    const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
-    const handleItemChange = (idx: number, field: keyof AdminCompanyProfileImage, val: string) => {
-      const newData = value.map((item, i) => i === idx ? { ...item, [field]: val } : item);
-      onChange(newData);
-    };
-    const addItem = () => {
-      onChange([...(value || []), { url: '', title: '' }]);
-    };
-    const removeItem = (idx: number) => {
-      // Preserve scroll position
-      const dialog = document.querySelector('.DialogContent') as HTMLElement | null;
-      const scrollTop = dialog ? dialog.scrollTop : 0;
-      onChange(value.filter((_, i) => i !== idx));
-      // Restore scroll position after state update
-      setTimeout(() => {
-        if (dialog) dialog.scrollTop = scrollTop;
-      }, 0);
-    };
-    const handleFileChange = async (idx: number, file: File) => {
-      setUploadingIdx(idx);
-      try {
-        const url = await uploadCompanyProfileImage(file);
-        const newData = value.map((item, i) => i === idx ? { ...item, url } : item);
-        onChange(newData);
-        toast({ title: 'Image uploaded' });
-      } catch (e) {
-        toast({ title: 'Failed to upload image', variant: 'destructive' });
-      }
-      setUploadingIdx(null);
-    };
-    return (
-      <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
-        <div className="font-semibold mb-2">{label}</div>
-        {(value || []).map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 mb-2">
-            <div className="flex flex-col gap-1">
-              <Input placeholder="Image URL" value={item.url} onChange={e => handleItemChange(idx, 'url', e.target.value)} className="w-64" />
-              <div className="flex items-center gap-2 mt-1">
-                <Input type="file" accept="image/*" onChange={e => {
-                  if (e.target.files && e.target.files[0]) handleFileChange(idx, e.target.files[0]);
-                }} className="w-48" />
-                {uploadingIdx === idx && <span className="text-xs text-blue-600 animate-pulse">Uploading...</span>}
-                {item.url && <img src={import.meta.env.VITE_IMAGE_URL+item.url} alt="Preview" className="w-12 h-12 object-cover rounded border ml-2" />}
-              </div>
-            </div>
-            <Input placeholder="Title" value={item.title} onChange={e => handleItemChange(idx, 'title', e.target.value)} className="w-40" />
-            <Button type="button" size="sm" variant="destructive" onClick={() => removeItem(idx)}>Remove</Button>
-          </div>
-        ))}
-        <Button type="button" size="sm" onClick={addItem}>Add Image</Button>
-      </div>
-    );
-  }
-
-  // Helper to add id to box data rows if missing, but keep the type as AdminCompanyProfileDataBox
-  function migrateBoxRows(box: AdminCompanyProfileDataBox | undefined): AdminCompanyProfileDataBox & { data: { name: string; data: string; id: string }[] } {
-    return {
-      column: box?.column ?? 2,
-      data: ((box?.data || []).map((item: { name: string; data: string; id?: string }) =>
-        item.id ? item : { ...item, id: crypto.randomUUID() }
-      )) as { name: string; data: string; id: string }[],
-    };
-  }
 
   return (
     <div className="flex min-h-screen">
@@ -541,8 +601,16 @@ export default function AdminCompanyProfiles() {
               </Select>
             </div>
             {/* --- Dynamic Nested Data Sections --- */}
-            <BoxEditor label="Info Box 1" value={migrateBoxRows(formData.data.box_1)} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_1: { column: v.column, data: v.data.map(({ id, ...rest }) => rest) } } }))} />
-            <BoxEditor label="Info Box 2" value={migrateBoxRows(formData.data.box_2)} onChange={v => setFormData(f => ({ ...f, data: { ...f.data, box_2: { column: v.column, data: v.data.map(({ id, ...rest }) => rest) } } }))} />
+            <BoxEditor 
+              label="Info Box 1" 
+              value={migratedBox1} 
+              onChange={handleBox1Change} 
+            />
+            <BoxEditor 
+              label="Info Box 2" 
+              value={migratedBox2} 
+              onChange={handleBox2Change} 
+            />
             <div className="mb-4 p-4 bg-gray-50 rounded shadow-sm">
               <div className="font-semibold mb-2">Product Application</div>
               <Input placeholder="Title" value={formData.data.p?.title || ''} onChange={e => setFormData(f => ({ ...f, data: { ...f.data, p: { ...f.data.p, title: e.target.value } } }))} className="mb-2" />
