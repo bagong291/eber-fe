@@ -41,16 +41,32 @@ type InfoBoxRow = {
 type InfoBoxDataBox = { column?: number; data: InfoBoxRow[] };
 
 // Helper components moved outside to prevent re-creation on every render
-function InfoBoxGrid({ box }: { box: AdminCompanyProfileDataBox }) {
+function InfoBoxGrid({ box, viewLanguage }: { box: AdminCompanyProfileDataBox; viewLanguage?: 'en' | 'id' }) {
   if (!box || !Array.isArray(box.data)) return null;
   return (
     <div className={`grid grid-cols-${box.column || 2} gap-4 mb-4`}>
-      {box.data.map((item, idx) => (
-        <div key={idx} className="bg-gray-50 rounded p-3 shadow-sm">
-          <div className="font-semibold text-sm mb-1">{item.name}</div>
-          <div className="text-sm whitespace-pre-line">{item.data}</div>
-        </div>
-      ))}
+      {box.data.map((item, idx) => {
+        // Language-aware name display
+        const displayName = viewLanguage === 'en' 
+          ? (item.name_en || item.name || '') 
+          : viewLanguage === 'id'
+          ? (item.name_id || item.name_en || item.name || '')
+          : item.name; // fallback for when viewLanguage is not provided
+          
+        // Language-aware data display
+        const displayData = viewLanguage === 'en' 
+          ? (item.data_en || item.data || '') 
+          : viewLanguage === 'id'
+          ? (item.data_id || item.data_en || item.data || '')
+          : item.data; // fallback for when viewLanguage is not provided
+          
+        return (
+          <div key={idx} className="bg-gray-50 rounded p-3 shadow-sm">
+            <div className="font-semibold text-sm mb-1">{displayName}</div>
+            <div className="text-sm whitespace-pre-line">{displayData}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -352,7 +368,8 @@ export default function AdminCompanyProfiles() {
   const [selectedCompany, setSelectedCompany] = useState<AdminCompanyProfileEntity | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AdminCompanyProfileEntity | null>(null);
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'id'>('en'); // Global language state
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'id'>('en'); // Global language state for form
+  const [viewLanguage, setViewLanguage] = useState<'en' | 'id'>('en'); // Language state for view page
   const [formData, setFormData] = useState<AdminCompanyProfileEntity>({
     name: '',
     location: '',
@@ -603,7 +620,7 @@ export default function AdminCompanyProfiles() {
                 />
               </div>
             )}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">{selectedCompany.name}</h2>
               <div className="space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEditDialog(selectedCompany)}>Edit</Button>
@@ -611,10 +628,44 @@ export default function AdminCompanyProfiles() {
                 <Button size="sm" variant="destructive" onClick={() => handleDelete(selectedCompany)}>Delete</Button>
               </div>
             </div>
+            
+            {/* Language Toggle Tabs for View */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex items-center space-x-3 bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewLanguage('en')}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
+                    viewLanguage === 'en'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🇺🇸 English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewLanguage('id')}
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2 ${
+                    viewLanguage === 'id'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  🇮🇩 Indonesia
+                </button>
+              </div>
+            </div>
             <div className="mb-2"><span className="font-semibold">Address:</span> {selectedCompany.address}</div>
             <div className="mb-2"><span className="font-semibold">Location:</span> {selectedCompany.location}</div>
             <div className="mb-2"><span className="font-semibold">Coordinate:</span> {selectedCompany.coordinate}</div>
-            <div className="mb-2"><span className="font-semibold">Description:</span> {selectedCompany.description}</div>
+            <div className="mb-2">
+              <span className="font-semibold">Description:</span> {
+                viewLanguage === 'en' 
+                  ? (selectedCompany.description_en || selectedCompany.description || '') 
+                  : (selectedCompany.description_id || selectedCompany.description_en || selectedCompany.description || '')
+              }
+            </div>
             <div className="mb-2">
               <span className="font-semibold">Status:</span> 
               <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
@@ -629,26 +680,38 @@ export default function AdminCompanyProfiles() {
             {selectedCompany.data?.box_1 && (
               <>
                 <div className="font-semibold text-lg mt-6 mb-2">Info Box 1</div>
-                <InfoBoxGrid box={selectedCompany.data.box_1} />
+                <InfoBoxGrid box={selectedCompany.data.box_1} viewLanguage={viewLanguage} />
               </>
             )}
             {selectedCompany.data?.box_2 && (
               <>
                 <div className="font-semibold text-lg mt-6 mb-2">Info Box 2</div>
-                <InfoBoxGrid box={selectedCompany.data.box_2} />
+                <InfoBoxGrid box={selectedCompany.data.box_2} viewLanguage={viewLanguage} />
               </>
             )}
             {/* --- Product Application --- */}
             {selectedCompany.data?.p && (
               <div className="mt-6 mb-2">
                 <div className="font-semibold text-lg">Product Application</div>
-                <div className="font-bold text-base mt-2">{selectedCompany.data.p.title}</div>
-                <div className="text-sm mt-1 mb-2">{selectedCompany.data.p.description}</div>
+                <div className="font-bold text-base mt-2">{
+                  viewLanguage === 'en' 
+                    ? (selectedCompany.data.p.title_en || selectedCompany.data.p.title || '') 
+                    : (selectedCompany.data.p.title_id || selectedCompany.data.p.title_en || selectedCompany.data.p.title || '')
+                }</div>
+                <div className="text-sm mt-1 mb-2">{
+                  viewLanguage === 'en' 
+                    ? (selectedCompany.data.p.description_en || selectedCompany.data.p.description || '') 
+                    : (selectedCompany.data.p.description_id || selectedCompany.data.p.description_en || selectedCompany.data.p.description || '')
+                }</div>
               </div>
             )}
             {/* --- Rearranged Titles and Images --- */}
-            {selectedCompany.data?.title_1 && (
-              <div className="font-bold text-base mt-4">{selectedCompany.data.title_1}</div>
+            {(selectedCompany.data?.title_1_en || selectedCompany.data?.title_1_id || selectedCompany.data?.title_1) && (
+              <div className="font-bold text-base mt-4">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.title_1_en || selectedCompany.data?.title_1 || '') 
+                  : (selectedCompany.data?.title_1_id || selectedCompany.data?.title_1_en || selectedCompany.data?.title_1 || '')
+              }</div>
             )}
             {selectedCompany.data?.images_1 && (
               <>
@@ -656,8 +719,12 @@ export default function AdminCompanyProfiles() {
                 <ImageGrid images={selectedCompany.data.images_1} />
               </>
             )}
-            {selectedCompany.data?.title_2 && (
-              <div className="font-bold text-base mt-4">{selectedCompany.data.title_2}</div>
+            {(selectedCompany.data?.title_2_en || selectedCompany.data?.title_2_id || selectedCompany.data?.title_2) && (
+              <div className="font-bold text-base mt-4">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.title_2_en || selectedCompany.data?.title_2 || '') 
+                  : (selectedCompany.data?.title_2_id || selectedCompany.data?.title_2_en || selectedCompany.data?.title_2 || '')
+              }</div>
             )}
             {selectedCompany.data?.images_2 && (
               <>
@@ -665,8 +732,12 @@ export default function AdminCompanyProfiles() {
                 <ImageGrid images={selectedCompany.data.images_2} />
               </>
             )}
-            {selectedCompany.data?.title_3 && (
-              <div className="font-bold text-base mt-4">{selectedCompany.data.title_3}</div>
+            {(selectedCompany.data?.title_3_en || selectedCompany.data?.title_3_id || selectedCompany.data?.title_3) && (
+              <div className="font-bold text-base mt-4">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.title_3_en || selectedCompany.data?.title_3 || '') 
+                  : (selectedCompany.data?.title_3_id || selectedCompany.data?.title_3_en || selectedCompany.data?.title_3 || '')
+              }</div>
             )}
             {selectedCompany.data?.images_3 && (
               <>
@@ -675,14 +746,26 @@ export default function AdminCompanyProfiles() {
               </>
             )}
             {/* --- Descriptions --- */}
-            {selectedCompany.data?.description_1 && (
-              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_1}</div>
+            {(selectedCompany.data?.description_1_en || selectedCompany.data?.description_1_id || selectedCompany.data?.description_1) && (
+              <div className="text-sm mt-1 mb-2">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.description_1_en || selectedCompany.data?.description_1 || '') 
+                  : (selectedCompany.data?.description_1_id || selectedCompany.data?.description_1_en || selectedCompany.data?.description_1 || '')
+              }</div>
             )}
-            {selectedCompany.data?.description_2 && (
-              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_2}</div>
+            {(selectedCompany.data?.description_2_en || selectedCompany.data?.description_2_id || selectedCompany.data?.description_2) && (
+              <div className="text-sm mt-1 mb-2">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.description_2_en || selectedCompany.data?.description_2 || '') 
+                  : (selectedCompany.data?.description_2_id || selectedCompany.data?.description_2_en || selectedCompany.data?.description_2 || '')
+              }</div>
             )}
-            {selectedCompany.data?.description_3 && (
-              <div className="text-sm mt-1 mb-2">{selectedCompany.data.description_3}</div>
+            {(selectedCompany.data?.description_3_en || selectedCompany.data?.description_3_id || selectedCompany.data?.description_3) && (
+              <div className="text-sm mt-1 mb-2">{
+                viewLanguage === 'en' 
+                  ? (selectedCompany.data?.description_3_en || selectedCompany.data?.description_3 || '') 
+                  : (selectedCompany.data?.description_3_id || selectedCompany.data?.description_3_en || selectedCompany.data?.description_3 || '')
+              }</div>
             )}
           </div>
         ) : (

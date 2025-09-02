@@ -11,6 +11,7 @@ import {
 } from '@/services/products/productsApi'
 import DataTable from '@/components/DataTable'
 import ProductFilters from '@/components/ProductFilters'
+import MultiLanguageInput from '@/components/MultiLanguageInput'
 import {
   Dialog,
   DialogContent,
@@ -71,8 +72,10 @@ export default function Products() {
   const [editingItem, setEditingItem] = useState<Product | null>(null)
   const [formData, setFormData] = useState<ProductPayload>({
     code: '',
-    application: '',
-    performanceFeature: '',
+    application_en: '',
+    application_id: '',
+    performanceFeature_en: '',
+    performanceFeature_id: '',
     type: '',
     status: true,
   })
@@ -80,8 +83,20 @@ export default function Products() {
   const columns = [
     { key: 'id' as const, label: 'ID' },
     { key: 'code' as const, label: 'Code' },
-    { key: 'application' as const, label: 'Application' },
-    { key: 'performanceFeature' as const, label: 'Feature' },
+    { 
+      key: 'application_en' as const, 
+      label: 'Application',
+      render: (application_en: string, item: any) => (
+        <div className="space-y-1">
+          <div className="text-sm font-medium">
+            🇺🇸 {application_en || item.application || 'No English application'}
+          </div>
+          <div className="text-xs text-gray-600">
+            🇮🇩 {item.application_id || item.application || 'No Indonesian application'}
+          </div>
+        </div>
+      )
+    },
     { key: 'type' as const, label: 'Type' },
     {
       key: 'status' as const,
@@ -134,7 +149,15 @@ export default function Products() {
 
   function openAddDialog() {
     setEditingItem(null)
-    setFormData({ code: '', application: '', performanceFeature: '', type: '', status: true })
+    setFormData({ 
+      code: '', 
+      application_en: '',
+      application_id: '',
+      performanceFeature_en: '', 
+      performanceFeature_id: '', 
+      type: '', 
+      status: true 
+    })
     setDialogOpen(true)
   }
 
@@ -142,8 +165,10 @@ export default function Products() {
     setEditingItem(item)
     setFormData({
       code: item.code,
-      application: item.application,
-      performanceFeature: item.performanceFeature,
+      application_en: item.application_en || item.application || '',
+      application_id: item.application_id || item.application || '',
+      performanceFeature_en: item.performanceFeature_en || item.performanceFeature || '',
+      performanceFeature_id: item.performanceFeature_id || item.performanceFeature || '',
       type: item.type,
       status: item.status,
     })
@@ -159,8 +184,10 @@ export default function Products() {
 
     const payload: ProductPayload = {
       code: item.code,
-      application: item.application,
-      performanceFeature: item.performanceFeature,
+      application_en: item.application_en || item.application || '',
+      application_id: item.application_id || item.application || '',
+      performanceFeature_en: item.performanceFeature_en || item.performanceFeature || '',
+      performanceFeature_id: item.performanceFeature_id || item.performanceFeature || '',
       type: item.type,
       status: item.status,
     }
@@ -181,6 +208,19 @@ export default function Products() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+
+    // Validation for multi-language fields
+    if (!formData.application_en.trim() || !formData.application_id.trim()) {
+      toast({ title: 'Please fill in both English and Indonesian application descriptions', variant: 'destructive' })
+      setSubmitting(false)
+      return
+    }
+    
+    if (!formData.performanceFeature_en.trim() || !formData.performanceFeature_id.trim()) {
+      toast({ title: 'Please fill in both English and Indonesian performance features', variant: 'destructive' })
+      setSubmitting(false)
+      return
+    }
 
     let res
     if (editingItem) {
@@ -267,7 +307,7 @@ export default function Products() {
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 p-4">
+          <form onSubmit={handleSubmit} className="space-y-8 p-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col space-y-1">
                 <Label htmlFor="code">Code</Label>
@@ -293,31 +333,53 @@ export default function Products() {
               </div>
             </div>
 
-            <div className="flex flex-col space-y-1">
-              <Label htmlFor="application">Application</Label>
-              <Input
-                id="application"
-                value={formData.application}
-                onChange={(e) =>
-                  setFormData((f) => ({ ...f, application: e.target.value }))
-                }
-                required
-              />
-            </div>
+            {/* Multi-Language Application Field */}
+            <MultiLanguageInput
+              label="Application"
+              type="text"
+              values={{
+                en: formData.application_en,
+                id: formData.application_id
+              }}
+              onChange={(values) => 
+                setFormData(f => ({ 
+                  ...f, 
+                  application_en: values.en, 
+                  application_id: values.id 
+                }))
+              }
+              required
+              placeholder={{
+                en: "Enter application description in English",
+                id: "Masukkan deskripsi aplikasi dalam Bahasa Indonesia"
+              }}
+            />
 
-            <div className="flex flex-col space-y-1">
-              <Label>Performance Features</Label>
-              <WysiwygEditor
-                value={formData.performanceFeature}
-                onChange={(v) =>
-                  setFormData((f) => ({ ...f, performanceFeature: v }))
-                }
-                placeholder="Describe performance features..."
-              />
-            </div>
+            {/* Multi-Language Performance Features Field */}
+            <MultiLanguageInput
+              label="Performance Features"
+              type="wysiwyg"
+              values={{
+                en: formData.performanceFeature_en,
+                id: formData.performanceFeature_id
+              }}
+              onChange={(values) => 
+                setFormData(f => ({ 
+                  ...f, 
+                  performanceFeature_en: values.en, 
+                  performanceFeature_id: values.id 
+                }))
+              }
+              required
+              placeholder={{
+                en: "Describe performance features in English...",
+                id: "Jelaskan fitur performa dalam Bahasa Indonesia..."
+              }}
+            />
 
-            <div className="flex flex-col space-y-1">
-              <Label htmlFor="status">Status</Label>
+            {/* Status Field */}
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="status" className="font-semibold text-base">Status</Label>
               <Select
                 value={formData.status ? 'active' : 'inactive'}
                 onValueChange={(value: 'active' | 'inactive') =>
@@ -334,7 +396,8 @@ export default function Products() {
               </Select>
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t pt-6 mt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -342,7 +405,7 @@ export default function Products() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="min-w-[100px]">
                 {isSubmitting ? <Spinner /> : editingItem ? 'Update' : 'Create'}
               </Button>
             </div>

@@ -25,8 +25,17 @@ export interface ApiResponse<T> {
 export interface Product {
   id: number
   code: string
-  application: string
-  performanceFeature: string
+  
+  // Multi-language fields
+  application_en: string
+  application_id: string
+  performanceFeature_en: string
+  performanceFeature_id: string
+  
+  // Legacy fields (for backward compatibility)
+  application?: string
+  performanceFeature?: string
+  
   type: string
   status: boolean
   createdAt: string
@@ -36,10 +45,15 @@ export interface Product {
 /**
  * Payload for create/update
  */
-export type ProductPayload = Omit<
-  Product,
-  'id' | 'createdAt' | 'updatedAt'
->
+export type ProductPayload = {
+  code: string
+  application_en: string
+  application_id: string
+  performanceFeature_en: string
+  performanceFeature_id: string
+  type: string
+  status: boolean
+}
 
 /**
  * Shape of list response (data + filters + meta)
