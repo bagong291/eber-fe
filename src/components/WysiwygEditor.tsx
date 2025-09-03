@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 // const quillTable = require('quill-table');
@@ -12,6 +12,20 @@ interface WysiwygEditorProps {
 }
 
 const WysiwygEditor = ({ value, onChange, placeholder }: WysiwygEditorProps) => {
+  const [internalValue, setInternalValue] = useState(value);
+  const quillRef = useRef<ReactQuill>(null);
+
+  // Sync external value changes with internal state
+  useEffect(() => {
+    if (value !== internalValue) {
+      setInternalValue(value);
+    }
+  }, [value]);
+
+  const handleChange = (content: string) => {
+    setInternalValue(content);
+    onChange(content);
+  };
   const modules = {
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
@@ -33,9 +47,10 @@ const WysiwygEditor = ({ value, onChange, placeholder }: WysiwygEditorProps) => 
   return (
     <div className="bg-white">
       <ReactQuill
+        ref={quillRef}
         theme="snow"
-        value={value}
-        onChange={onChange}
+        value={internalValue}
+        onChange={handleChange}
         modules={modules}
         formats={formats}
         placeholder={placeholder}

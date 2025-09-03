@@ -65,6 +65,7 @@ export default function MultiLanguageInput({
       case 'textarea':
         return (
           <textarea
+            key={`${activeTab}-textarea`}
             value={currentValue}
             onChange={(e) => handleValueChange(e.target.value)}
             placeholder={currentPlaceholder}
@@ -76,6 +77,7 @@ export default function MultiLanguageInput({
         return (
           <div className={`border border-t-0 rounded-b-md rounded-tr-md ${config.borderColor} ${config.bgColor} p-1`}>
             <WysiwygEditor
+              key={`${activeTab}-wysiwyg`}
               value={currentValue}
               onChange={handleValueChange}
               placeholder={currentPlaceholder}
@@ -85,6 +87,7 @@ export default function MultiLanguageInput({
       default:
         return (
           <Input
+            key={`${activeTab}-input`}
             value={currentValue}
             onChange={(e) => handleValueChange(e.target.value)}
             placeholder={currentPlaceholder}
