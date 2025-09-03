@@ -375,6 +375,8 @@ export default function AdminCompanyProfiles() {
     location: '',
     coordinate: '',
     address: '',
+    address_en: '',
+    address_id: '',
     description: '',
     data: {
       box_1: { column: 2, data: [] },
@@ -472,6 +474,8 @@ export default function AdminCompanyProfiles() {
       location: '',
       coordinate: '',
       address: '',
+      address_en: '',
+      address_id: '',
       description: '',
       data: {
         box_1: { column: 2, data: [] },
@@ -522,6 +526,8 @@ export default function AdminCompanyProfiles() {
         location: `${item.location} ${randomSuffix}`,
         coordinate: `${item.coordinate} ${randomSuffix}`,
         address: `${item.address} ${randomSuffix}`,
+        address_en: `${item.address_en || ''} ${randomSuffix}`,
+        address_id: `${item.address_id || ''} ${randomSuffix}`,
         description: `${item.description} ${randomSuffix}`,
       };
       await createAdminCompanyProfile(newItem);
@@ -656,7 +662,11 @@ export default function AdminCompanyProfiles() {
                 </button>
               </div>
             </div>
-            <div className="mb-2"><span className="font-semibold">Address:</span> {selectedCompany.address}</div>
+            <div className="mb-2"><span className="font-semibold">Address:</span> {
+              viewLanguage === 'en' 
+                ? (selectedCompany.address_en || selectedCompany.address || '') 
+                : (selectedCompany.address_id || selectedCompany.address_en || selectedCompany.address || '')
+            }</div>
             <div className="mb-2"><span className="font-semibold">Location:</span> {selectedCompany.location}</div>
             <div className="mb-2"><span className="font-semibold">Coordinate:</span> {selectedCompany.coordinate}</div>
             <div className="mb-2">
@@ -864,9 +874,35 @@ export default function AdminCompanyProfiles() {
               <Label>Coordinate</Label>
               <Input value={formData.coordinate} onChange={e => setFormData(f => ({ ...f, coordinate: e.target.value }))} />
             </div>
+            {/* Global Language-Aware Address */}
             <div>
-              <Label>Address</Label>
-              <Input value={formData.address} onChange={e => setFormData(f => ({ ...f, address: e.target.value }))} required />
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-2">
+                Address *
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7 2a1 1 0 011 1v1h3a1 1 0 110 2H9.578a18.87 18.87 0 01-1.724 4.78c.29.354.596.696.914 1.026a1 1 0 11-1.44 1.389c-.188-.196-.373-.396-.554-.6a19.098 19.098 0 01-3.107 3.567 1 1 0 01-1.334-1.49 17.087 17.087 0 003.13-3.733 18.992 18.992 0 01-1.487-2.494 1 1 0 111.79-.89c.234.47.489.928.764 1.372.417-.934.752-1.913.997-2.927H3a1 1 0 110-2h3V3a1 1 0 011-1zm6 6a1 1 0 01.894.553l2.991 5.982a.869.869 0 01.02.037l.99 1.98a1 1 0 11-1.79.895L15.383 16h-4.764l-.724 1.447a1 1 0 11-1.788-.894l.99-1.98.019-.038 2.99-5.982A1 1 0 0113 8zm-1.382 4h2.764L13 9.236 11.618 12z" clipRule="evenodd" />
+                  </svg>
+                  {currentLanguage === 'en' ? 'EN' : 'ID'}
+                </span>
+              </Label>
+              <div className="relative">
+                <Input
+                  value={currentLanguage === 'en' ? (formData.address_en || '') : (formData.address_id || '')}
+                  onChange={e => {
+                    if (currentLanguage === 'en') {
+                      setFormData(f => ({ ...f, address_en: e.target.value }));
+                    } else {
+                      setFormData(f => ({ ...f, address_id: e.target.value }));
+                    }
+                  }}
+                  placeholder={currentLanguage === 'en' ? "Enter company address in English" : "Masukkan alamat perusahaan dalam Bahasa Indonesia"}
+                  required
+                  className="w-full pr-12 border-l-4 border-l-blue-400"
+                />
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs font-medium text-blue-600">
+                  {currentLanguage === 'en' ? '🇺🇸' : '🇮🇩'}
+                </div>
+              </div>
             </div>
             {/* Global Language-Aware Description */}
             <div>

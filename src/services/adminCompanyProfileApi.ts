@@ -2,7 +2,15 @@ import apiClient from './apiClient';
 
 export interface AdminCompanyProfileDataBox {
   column: number;
-  data: { name: string; data: string }[];
+  data: { 
+    name: string; 
+    data: string;
+    // Multi-language fields
+    name_en?: string;
+    name_id?: string;
+    data_en?: string;
+    data_id?: string;
+  }[];
 }
 
 export interface AdminCompanyProfileImage {
@@ -63,7 +71,11 @@ export interface AdminCompanyProfileEntity {
   name: string;
   location: string;
   coordinate: string;
-  address: string;
+  // Multi-language address
+  address_en?: string;
+  address_id?: string;
+  // Legacy field (for backward compatibility)
+  address?: string;
   // Multi-language main description
   description_en?: string;
   description_id?: string;
