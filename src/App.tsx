@@ -21,8 +21,24 @@ import Applications from "./pages/admin/Applications";
 import ContactInfo from "./pages/admin/ContactInfo";
 import NotFound from "./pages/NotFound";
 import AdminCompanyProfiles from "./pages/admin/AdminCompanyProfiles";
+import FormSubmissions from "./pages/admin/FormSubmissions";
+import ProductEmailAnalytics from "./pages/admin/ProductEmailAnalytics";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: 2,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -50,6 +66,8 @@ const App = () => (
             <Route path="applications" element={<Applications />} />
             <Route path="contact-info" element={<ContactInfo />} />
             <Route path="company-profiles-admin" element={<AdminCompanyProfiles />} />
+            <Route path="form-submissions" element={<FormSubmissions />} />
+            <Route path="product-email-analytics" element={<ProductEmailAnalytics />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

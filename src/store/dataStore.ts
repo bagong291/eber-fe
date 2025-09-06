@@ -82,6 +82,28 @@ export interface ContactInfo {
   phone: string;
 }
 
+export interface FormSubmission {
+  id: string | number;
+  formType: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone: string;
+  company?: string;
+  city?: string;
+  subject?: string;
+  message?: string;
+  productCode?: string; // For product email submissions
+  status: 'sent' | 'failed';
+  emailSent?: boolean;
+  emailSentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
 interface DataState {
   heroBanners: HeroBanner[];
   aboutUs: AboutUs[];
@@ -93,6 +115,7 @@ interface DataState {
   careers: Career[];
   applications: Application[];
   contactInfo: ContactInfo[];
+  formSubmissions: FormSubmission[];
 
   // Generic CRUD operations
   addItem: <T extends { id: string }>(type: keyof DataState, item: Omit<T, 'id'>) => void;
@@ -176,6 +199,38 @@ const initialContactInfo: ContactInfo[] = [
   { id: '1', address: '123 Main St, New York, NY 10001', email: 'contact@company.com', phone: '+1 (555) 123-4567' }
 ];
 
+const initialFormSubmissions: FormSubmission[] = [
+  {
+    id: '1',
+    formType: 'instant-access',
+    fullName: 'John Doe',
+    email: 'indonesia.dds@gmail.com',
+    phone: '+1234567890',
+    company: 'Tech Corporation',
+    city: 'New York',
+    status: 'failed',
+    createdAt: '2024-01-15T10:30:00Z',
+    updatedAt: '2024-01-15T10:30:00Z',
+    ipAddress: '192.168.1.1',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+  },
+  {
+    id: '2',
+    formType: 'contact-form',
+    firstName: 'Jane',
+    lastName: 'Smith',
+    email: 'jane.smith@example.com',
+    phone: '+1987654321',
+    company: 'Design Studio',
+    message: 'Interested in your products for our upcoming project.',
+    status: 'sent',
+    createdAt: '2024-01-14T14:20:00Z',
+    updatedAt: '2024-01-14T16:45:00Z',
+    ipAddress: '192.168.1.2',
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+  }
+];
+
 export const useDataStore = create<DataState>((set, get) => ({
   heroBanners: initialHeroBanners,
   aboutUs: initialAboutUs,
@@ -187,6 +242,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   careers: initialCareers,
   applications: initialApplications,
   contactInfo: initialContactInfo,
+  formSubmissions: initialFormSubmissions,
 
   addItem: (type, item) => {
     const newItem = { ...item, id: Date.now().toString() };

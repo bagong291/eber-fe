@@ -17,7 +17,9 @@ import {
   Phone,
   LogOut,
   Menu,
-  X
+  X,
+  ClipboardList,
+  Mail
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -41,6 +43,8 @@ const AdminLayout = () => {
     { path: '/admin/products', icon: Package, label: 'Products' },
     { path: '/admin/articles', icon: FileText, label: 'Articles' },
     { path: '/admin/careers', icon: Briefcase, label: 'Careers' },
+    { path: '/admin/form-submissions', icon: ClipboardList, label: 'Form Submissions' },
+    { path: '/admin/product-email-analytics', icon: Mail, label: 'Product Email Analytics' },
     // { path: '/admin/applications', icon: Users, label: 'Applications' },
     // { path: '/admin/contact-info', icon: Phone, label: 'Contact Info' },
   ];
@@ -62,7 +66,7 @@ const AdminLayout = () => {
             <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
+            <span className="text-sm text-gray-600">Welcome, {user?.username}</span>
             <Button onClick={handleLogout} variant="outline" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
