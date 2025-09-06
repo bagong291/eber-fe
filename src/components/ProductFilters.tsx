@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, Filter, Loader2 } from 'lucide-react'
@@ -43,6 +43,23 @@ export default function ProductFilters({
 }: ProductFiltersProps) {
   const [isTypeOpen, setIsTypeOpen] = useState(false)
   const [isApplicationOpen, setIsApplicationOpen] = useState(false)
+  const typeDropdownRef = useRef<HTMLDivElement>(null)
+  const applicationDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
+        setIsTypeOpen(false)
+      }
+      if (applicationDropdownRef.current && !applicationDropdownRef.current.contains(event.target as Node)) {
+        setIsApplicationOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleTypeSelect = (type: string) => {
     if (selectedTypes.includes(type)) {
@@ -88,61 +105,89 @@ export default function ProductFilters({
         {/* Type Filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Type</label>
-          <Select open={isTypeOpen} onOpenChange={setIsTypeOpen} disabled={isLoading}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={isLoading ? "Loading..." : "Select Types"} />
-            </SelectTrigger>
-            <SelectContent>
-              {filterOptions.types.map((type) => (
-                <SelectItem
-                  key={type}
-                  value={type}
-                  onClick={() => handleTypeSelect(type)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
+          <div className="relative" ref={typeDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsTypeOpen(!isTypeOpen)}
+              disabled={isLoading}
+              className="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="truncate">
+                {isLoading 
+                  ? "Loading..." 
+                  : selectedTypes.length > 0 
+                    ? `${selectedTypes.length} selected`
+                    : "Select Types"
+                }
+              </span>
+              <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isTypeOpen && (
+              <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                {filterOptions.types.map((type) => (
+                  <div
+                    key={type}
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
+                    onClick={() => handleTypeSelect(type)}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedTypes.includes(type)}
                       readOnly
                       className="h-4 w-4"
                     />
-                    {type}
+                    <span className="flex-1">{type}</span>
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Application Filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Application</label>
-          <Select open={isApplicationOpen} onOpenChange={setIsApplicationOpen} disabled={isLoading}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={isLoading ? "Loading..." : "Select Applications"} />
-            </SelectTrigger>
-            <SelectContent>
-              {filterOptions.applications.map((application) => (
-                <SelectItem
-                  key={application}
-                  value={application}
-                  onClick={() => handleApplicationSelect(application)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
+          <div className="relative" ref={applicationDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsApplicationOpen(!isApplicationOpen)}
+              disabled={isLoading}
+              className="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="truncate">
+                {isLoading 
+                  ? "Loading..." 
+                  : selectedApplications.length > 0 
+                    ? `${selectedApplications.length} selected`
+                    : "Select Applications"
+                }
+              </span>
+              <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isApplicationOpen && (
+              <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+                {filterOptions.applications.map((application) => (
+                  <div
+                    key={application}
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
+                    onClick={() => handleApplicationSelect(application)}
+                  >
                     <input
                       type="checkbox"
                       checked={selectedApplications.includes(application)}
                       readOnly
                       className="h-4 w-4"
                     />
-                    {application}
+                    <span className="flex-1">{application}</span>
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Status Filter */}
