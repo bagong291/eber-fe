@@ -1,6 +1,7 @@
 // src/services/products/productsApi.ts
 import { AxiosError, AxiosResponse } from 'axios'
 import apiClient from '@/services/apiClient'
+import { buildQueryString } from '@/utils/urlUtils'
 
 /**
  * Exactly the shape your server returns on 200
@@ -122,18 +123,21 @@ export function listProducts(
   page: number = 1,
   pageSize: number = 10
 ): Promise<ApiResponse<ProductsListData>> {
-  const params: Record<string, string | number | string[]> = { page, pageSize }
-  
-  // Add filter parameters
-  if (filter.search) params.search = filter.search
-  if (filter.code) params.code = filter.code
-  if (filter.type && Array.isArray(filter.type) && filter.type.length > 0) params.type = filter.type
-  if (filter.application && Array.isArray(filter.application) && filter.application.length > 0) params.application = filter.application
+  const params = {
+    page,
+    pageSize,
+    search: filter.search,
+    code: filter.code,
+    type: filter.type,
+    application: filter.application,
+  }
+
+  // Build clean query string (arrays will be comma-separated)
+  const queryString = buildQueryString(params)
+  const url = queryString ? `/products?${queryString}` : '/products'
 
   return handleRequest(
-    apiClient.get<ApiWrapper<ProductsListData>>(`/products`, {
-      params,
-    })
+    apiClient.get<ApiWrapper<ProductsListData>>(url)
   )
 }
 
