@@ -358,7 +358,7 @@ export default function Products() {
             {/* Multi-Language Performance Features Field */}
             <MultiLanguageInput
               label="Performance Features"
-              type="wysiwyg"
+              type="textarea"
               values={{
                 en: formData.performanceFeature_en,
                 id: formData.performanceFeature_id
