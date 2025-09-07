@@ -298,6 +298,11 @@ export default function Articles() {
     if (editingItem) {
       const updatePayload: UpdateArticlePayload = {
         ...formData,
+        // For Eber Magazine, ensure body fields have default values if empty
+        ...(formData.group === 'Eber Magazine' && {
+          body_en: formData.body_en || 'PDF content',
+          body_id: formData.body_id || 'Konten PDF'
+        }),
         ...(newImage && { image: newImage }),
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
@@ -315,6 +320,11 @@ export default function Articles() {
       }
       const createPayload: ArticlePayload = {
         ...formData,
+        // For Eber Magazine, ensure body fields have default values if empty
+        ...(formData.group === 'Eber Magazine' && {
+          body_en: formData.body_en || 'PDF content',
+          body_id: formData.body_id || 'Konten PDF'
+        }),
         image: newImage,
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
@@ -404,10 +414,19 @@ export default function Articles() {
                 <Select
                   value={formData.group || "none"}
                   onValueChange={(value) => {
-                    setFormData((f) => ({ ...f, group: value === "none" ? "" : value }))
-                    // Reset PDF and body when group changes
+                    const newGroup = value === "none" ? "" : value;
+                    setFormData((f) => ({ 
+                      ...f, 
+                      group: newGroup,
+                      // For Eber Magazine, set body fields to default values since they're not used
+                      ...(newGroup === 'Eber Magazine' && {
+                        body_en: 'PDF content',
+                        body_id: 'Konten PDF'
+                      })
+                    }))
+                    // Reset PDF when group changes
                     setPdfFile(null)
-                    setFormData((f) => ({ ...f, body: '' }))
+                    setPdfPayload(null)
                   }}
                 >
                   <SelectTrigger>
