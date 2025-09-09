@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, Filter, Loader2 } from 'lucide-react'
@@ -10,6 +9,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import SearchableMultiSelect from '@/components/ui/SearchableMultiSelect'
+import VirtualizedMultiSelect from '@/components/ui/VirtualizedMultiSelect'
 
 interface ProductFiltersProps {
   filterOptions: {
@@ -41,41 +42,9 @@ export default function ProductFilters({
   onClearAll,
   isLoading = false,
 }: ProductFiltersProps) {
-  const [isTypeOpen, setIsTypeOpen] = useState(false)
-  const [isApplicationOpen, setIsApplicationOpen] = useState(false)
-  const typeDropdownRef = useRef<HTMLDivElement>(null)
-  const applicationDropdownRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
-        setIsTypeOpen(false)
-      }
-      if (applicationDropdownRef.current && !applicationDropdownRef.current.contains(event.target as Node)) {
-        setIsApplicationOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleTypeSelect = (type: string) => {
-    if (selectedTypes.includes(type)) {
-      onTypeChange(selectedTypes.filter(t => t !== type))
-    } else {
-      onTypeChange([...selectedTypes, type])
-    }
-  }
-
-  const handleApplicationSelect = (application: string) => {
-    if (selectedApplications.includes(application)) {
-      onApplicationChange(selectedApplications.filter(a => a !== application))
-    } else {
-      onApplicationChange([...selectedApplications, application])
-    }
-  }
+  // Convert filter options to the format expected by the multi-select components
+  const typeOptions = filterOptions.types.map(type => ({ value: type, label: type }))
+  const applicationOptions = filterOptions.applications.map(app => ({ value: app, label: app }))
 
   const hasActiveFilters = search.trim() !== '' || selectedTypes.length > 0 || selectedApplications.length > 0 || statusFilter !== 'all'
 
@@ -105,89 +74,57 @@ export default function ProductFilters({
         {/* Type Filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Type</label>
-          <div className="relative" ref={typeDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsTypeOpen(!isTypeOpen)}
+          {/* Use VirtualizedMultiSelect if many options, otherwise use SearchableMultiSelect */}
+          {typeOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={typeOptions}
+              selectedValues={selectedTypes}
+              onSelectionChange={onTypeChange}
+              placeholder={isLoading ? "Loading..." : "Select Types"}
               disabled={isLoading}
-              className="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="truncate">
-                {isLoading 
-                  ? "Loading..." 
-                  : selectedTypes.length > 0 
-                    ? `${selectedTypes.length} selected`
-                    : "Select Types"
-                }
-              </span>
-              <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {isTypeOpen && (
-              <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                {filterOptions.types.map((type) => (
-                  <div
-                    key={type}
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
-                    onClick={() => handleTypeSelect(type)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      readOnly
-                      className="h-4 w-4"
-                    />
-                    <span className="flex-1">{type}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={typeOptions}
+              selectedValues={selectedTypes}
+              onSelectionChange={onTypeChange}
+              placeholder={isLoading ? "Loading..." : "Select Types"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
         </div>
 
         {/* Application Filter */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-gray-600">Application</label>
-          <div className="relative" ref={applicationDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsApplicationOpen(!isApplicationOpen)}
+          {/* Use VirtualizedMultiSelect if many options, otherwise use SearchableMultiSelect */}
+          {applicationOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={applicationOptions}
+              selectedValues={selectedApplications}
+              onSelectionChange={onApplicationChange}
+              placeholder={isLoading ? "Loading..." : "Select Applications"}
               disabled={isLoading}
-              className="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="truncate">
-                {isLoading 
-                  ? "Loading..." 
-                  : selectedApplications.length > 0 
-                    ? `${selectedApplications.length} selected`
-                    : "Select Applications"
-                }
-              </span>
-              <svg className="h-4 w-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {isApplicationOpen && (
-              <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-                {filterOptions.applications.map((application) => (
-                  <div
-                    key={application}
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
-                    onClick={() => handleApplicationSelect(application)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedApplications.includes(application)}
-                      readOnly
-                      className="h-4 w-4"
-                    />
-                    <span className="flex-1">{application}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={applicationOptions}
+              selectedValues={selectedApplications}
+              onSelectionChange={onApplicationChange}
+              placeholder={isLoading ? "Loading..." : "Select Applications"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
         </div>
 
         {/* Status Filter */}
