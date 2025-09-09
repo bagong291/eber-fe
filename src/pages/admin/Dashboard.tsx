@@ -87,7 +87,7 @@ const Dashboard = () => {
   }
 
   const stats = [
-    { label: 'Hero Banners', count: dashboardData.stats.heroBanners.total, icon: Image, color: 'bg-blue-500' },
+    // { label: 'Hero Banners', count: dashboardData.stats.heroBanners.total, icon: Image, color: 'bg-blue-500' },
     { label: 'Corporate Entities', count: dashboardData.stats.corporateEntities.total, icon: Building, color: 'bg-green-500' },
     { label: 'Articles', count: dashboardData.stats.articles.total, icon: FileText, color: 'bg-red-500' },
     { label: 'Products', count: dashboardData.stats.products.total, icon: Package, color: 'bg-purple-500' },
