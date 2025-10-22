@@ -62,25 +62,27 @@ export interface ArticleImagePayload {
 /**
  * Payload you send when creating or updating
  */
-export type ArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image' | 'title' | 'body'> & {
+export type ArticlePayload = Omit<Article, 'id' | 'updatedAt' | 'image' | 'title' | 'body'> & {
   title_en: string
   title_id: string
   body_en: string
   body_id: string
   image: ArticleImagePayload
   pdf?: { name: string; extension: string; data: string }
+  createdAt?: string
 }
 
 /**
  * Payload for updating articles (image is optional)
  */
-export type UpdateArticlePayload = Omit<Article, 'id' | 'createdAt' | 'updatedAt' | 'image' | 'title' | 'body'> & {
+export type UpdateArticlePayload = Omit<Article, 'id' | 'updatedAt' | 'image' | 'title' | 'body'> & {
   title_en?: string
   title_id?: string
   body_en?: string
   body_id?: string
   image?: ArticleImagePayload
   pdf?: { name: string; extension: string; data: string }
+  createdAt?: string
 }
 
 /**

@@ -61,6 +61,7 @@ export default function Articles() {
     author: string
     group: string
     status: boolean
+    createdAt: string
   }>({
     title_en: '',
     title_id: '',
@@ -69,6 +70,7 @@ export default function Articles() {
     author: currentUsername,
     group: '',
     status: true,
+    createdAt: new Date().toISOString().slice(0, 16), // Format for datetime-local input
   })
   const [newImage, setNewImage] = useState<ArticleImagePayload | null>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -194,7 +196,8 @@ export default function Articles() {
       body_id: '', 
       author: currentUsername, 
       group: '', 
-      status: true 
+      status: true,
+      createdAt: new Date().toISOString().slice(0, 16)
     })
     setNewImage(null)
     setPdfFile(null)
@@ -220,6 +223,7 @@ export default function Articles() {
       author: res.data.author,
       group: res.data.group || '',
       status: res.data.status,
+      createdAt: new Date(res.data.createdAt).toISOString().slice(0, 16),
     })
     setNewImage(null)
     setPdfFile(null)
@@ -303,9 +307,12 @@ export default function Articles() {
           body_en: formData.body_en || 'PDF content',
           body_id: formData.body_id || 'Konten PDF'
         }),
+        createdAt: formData.createdAt + ':00.000Z', // Treat as UTC to preserve exact time
         ...(newImage && { image: newImage }),
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
+      console.log('Update payload:', updatePayload)
+      console.log('FormData createdAt:', formData.createdAt)
       res = await updateArticle(editingItem.id, updatePayload)
     } else {
       if (!newImage) {
@@ -325,10 +332,13 @@ export default function Articles() {
           body_en: formData.body_en || 'PDF content',
           body_id: formData.body_id || 'Konten PDF'
         }),
+        createdAt: formData.createdAt + ':00.000Z', // Treat as UTC to preserve exact time
         image: newImage,
         ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
       }
-      res = await createArticle({ ...createPayload, author: currentUsername })
+      console.log('Create payload:', createPayload)
+      console.log('FormData createdAt:', formData.createdAt)
+      res = await createArticle(createPayload)
     }
     setSubmitting(false)
     if (res.success) {
@@ -542,6 +552,26 @@ export default function Articles() {
                   }}
                 />
               )}
+
+              {/* Article Date Field */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="createdAt" className="font-semibold text-base">Tanggal Artikel</Label>
+                <Input
+                  id="createdAt"
+                  type="datetime-local"
+                  value={formData.createdAt}
+                  onChange={(e) => {
+                    console.log('Date input changed:', e.target.value)
+                    setFormData(f => {
+                      const updated = { ...f, createdAt: e.target.value }
+                      console.log('Updated formData:', updated)
+                      return updated
+                    })
+                  }}
+                  className="w-full"
+                />
+                <span className="text-xs text-gray-500">Pilih tanggal dan waktu untuk artikel ini</span>
+              </div>
 
               {/* Status Field */}
               <div className="flex flex-col space-y-2">
