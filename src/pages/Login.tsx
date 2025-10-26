@@ -125,13 +125,6 @@ const Login: React.FC = () => {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm text-blue-700">
-            <p>
-              <strong>Demo Credentials:</strong>
-            </p>
-            <p>Username: admin</p>
-            <p>Password: admin123</p>
-          </div>
         </CardContent>
       </Card>
     </div>
