@@ -83,6 +83,7 @@ export default function Articles() {
     'Ethical Governence & Compliance',
     'Eber Magazine',
     'Company Event',
+    'Calendar',
   ]
 
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
@@ -292,7 +293,7 @@ export default function Articles() {
       return
     }
     
-    if (formData.group !== 'Eber Magazine' && (!formData.body_en.trim() || !formData.body_id.trim())) {
+    if (formData.group !== 'Eber Magazine' && formData.group !== 'Calendar' && (!formData.body_en.trim() || !formData.body_id.trim())) {
       toast({ title: 'Please fill in both English and Indonesian body content', variant: 'destructive' })
       setSubmitting(false)
       return
@@ -300,16 +301,19 @@ export default function Articles() {
 
     let res
     if (editingItem) {
-      const updatePayload: UpdateArticlePayload = {
+      const basePayload = {
         ...formData,
-        // For Eber Magazine, ensure body fields have default values if empty
-        ...(formData.group === 'Eber Magazine' && {
+        // For Eber Magazine and Calendar, ensure body fields have default values if empty
+        ...((formData.group === 'Eber Magazine' || formData.group === 'Calendar') && {
           body_en: formData.body_en || 'PDF content',
           body_id: formData.body_id || 'Konten PDF'
         }),
         createdAt: formData.createdAt + ':00.000Z', // Treat as UTC to preserve exact time
+      }
+      const updatePayload: UpdateArticlePayload = {
+        ...basePayload,
         ...(newImage && { image: newImage }),
-        ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
+        ...((formData.group === 'Eber Magazine' || formData.group === 'Calendar') && pdfPayload && { pdf: pdfPayload })
       }
       console.log('Update payload:', updatePayload)
       console.log('FormData createdAt:', formData.createdAt)
@@ -320,21 +324,24 @@ export default function Articles() {
         setSubmitting(false)
         return
       }
-      if (formData.group === 'Eber Magazine' && !pdfPayload) {
-        toast({ title: 'Please upload a PDF for Eber Magazine', variant: 'destructive' })
+      if ((formData.group === 'Eber Magazine' || formData.group === 'Calendar') && !pdfPayload) {
+        toast({ title: `Please upload a PDF for ${formData.group}`, variant: 'destructive' })
         setSubmitting(false)
         return
       }
-      const createPayload: ArticlePayload = {
+      const basePayload = {
         ...formData,
-        // For Eber Magazine, ensure body fields have default values if empty
-        ...(formData.group === 'Eber Magazine' && {
+        // For Eber Magazine and Calendar, ensure body fields have default values if empty
+        ...((formData.group === 'Eber Magazine' || formData.group === 'Calendar') && {
           body_en: formData.body_en || 'PDF content',
           body_id: formData.body_id || 'Konten PDF'
         }),
         createdAt: formData.createdAt + ':00.000Z', // Treat as UTC to preserve exact time
         image: newImage,
-        ...(formData.group === 'Eber Magazine' && pdfPayload && { pdf: pdfPayload })
+      }
+      const createPayload: ArticlePayload = {
+        ...basePayload,
+        ...((formData.group === 'Eber Magazine' || formData.group === 'Calendar') && pdfPayload && { pdf: pdfPayload })
       }
       console.log('Create payload:', createPayload)
       console.log('FormData createdAt:', formData.createdAt)
@@ -428,8 +435,8 @@ export default function Articles() {
                     setFormData((f) => ({ 
                       ...f, 
                       group: newGroup,
-                      // For Eber Magazine, set body fields to default values since they're not used
-                      ...(newGroup === 'Eber Magazine' && {
+                      // For Eber Magazine and Calendar, set body fields to default values since they're not used
+                      ...((newGroup === 'Eber Magazine' || newGroup === 'Calendar') && {
                         body_en: 'PDF content',
                         body_id: 'Konten PDF'
                       })
@@ -496,11 +503,11 @@ export default function Articles() {
                   id: "Masukkan judul artikel dalam Bahasa Indonesia"
                 }}
               />
-              {/* PDF upload for Eber Magazine, directly under Title */}
-              {formData.group === 'Eber Magazine' && (
+              {/* PDF upload for Eber Magazine and Calendar, directly under Title */}
+              {(formData.group === 'Eber Magazine' || formData.group === 'Calendar') && (
                 <div className="flex flex-col space-y-3 border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50 shadow-sm mt-2">
                   <Label htmlFor="pdf" className="font-semibold text-base mb-1 flex items-center gap-2">
-                    PDF <span className="text-xs text-blue-700">(Required for Eber Magazine)</span>
+                    PDF <span className="text-xs text-blue-700">(Required for {formData.group})</span>
                   </Label>
                   {existingPdfUrl && (
                     <div className="mb-2">
@@ -529,8 +536,8 @@ export default function Articles() {
                 </div>
               )}
 
-              {/* Multi-Language Body Field (hidden for Eber Magazine) */}
-              {formData.group !== 'Eber Magazine' && (
+              {/* Multi-Language Body Field (hidden for Eber Magazine and Calendar) */}
+              {formData.group !== 'Eber Magazine' && formData.group !== 'Calendar' && (
                 <MultiLanguageInput
                   label="Body Content"
                   type="wysiwyg"
