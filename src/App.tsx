@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import AdminCompanyProfiles from "./pages/admin/AdminCompanyProfiles";
 import FormSubmissions from "./pages/admin/FormSubmissions";
 import ProductEmailAnalytics from "./pages/admin/ProductEmailAnalytics";
+import Certificates from "./pages/admin/Certificates";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="company-profiles-admin" element={<AdminCompanyProfiles />} />
             <Route path="form-submissions" element={<FormSubmissions />} />
             <Route path="product-email-analytics" element={<ProductEmailAnalytics />} />
+            <Route path="certificates" element={<Certificates />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

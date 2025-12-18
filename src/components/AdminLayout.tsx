@@ -45,6 +45,7 @@ const AdminLayout = () => {
     { path: '/admin/careers', icon: Briefcase, label: 'Careers' },
     { path: '/admin/form-submissions', icon: ClipboardList, label: 'Form Submissions' },
     { path: '/admin/product-email-analytics', icon: Mail, label: 'Product Email Analytics' },
+    { path: '/admin/certificates', icon: Award, label: 'Certificates' },
     // { path: '/admin/applications', icon: Users, label: 'Applications' },
     // { path: '/admin/contact-info', icon: Phone, label: 'Contact Info' },
   ];
