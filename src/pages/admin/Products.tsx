@@ -78,6 +78,12 @@ export default function Products() {
     performanceFeature_id: '',
     type: '',
     status: true,
+    it_mfg: '',
+    segment: '',
+    sbu_name: '',
+    grp_name: '',
+    grp_sbu: '',
+    coid: '',
   })
 
   const columns = [
@@ -98,6 +104,12 @@ export default function Products() {
       )
     },
     { key: 'type' as const, label: 'Type' },
+    { key: 'it_mfg' as const, label: 'IT MFG' },
+    { key: 'segment' as const, label: 'Segment' },
+    { key: 'sbu_name' as const, label: 'SBU Name' },
+    { key: 'grp_name' as const, label: 'GRP Name' },
+    { key: 'grp_sbu' as const, label: 'GRP SBU' },
+    { key: 'coid' as const, label: 'CoID' },
     {
       key: 'status' as const,
       label: 'Status',
@@ -156,7 +168,13 @@ export default function Products() {
       performanceFeature_en: '', 
       performanceFeature_id: '', 
       type: '', 
-      status: true 
+      status: true,
+      it_mfg: '',
+      segment: '',
+      sbu_name: '',
+      grp_name: '',
+      grp_sbu: '',
+      coid: '',
     })
     setDialogOpen(true)
   }
@@ -171,6 +189,12 @@ export default function Products() {
       performanceFeature_id: item.performanceFeature_id || item.performanceFeature || '',
       type: item.type,
       status: item.status,
+      it_mfg: item.it_mfg || '',
+      segment: item.segment || '',
+      sbu_name: item.sbu_name || '',
+      grp_name: item.grp_name || '',
+      grp_sbu: item.grp_sbu || '',
+      coid: item.coid || '',
     })
     setDialogOpen(true)
   }
@@ -190,6 +214,12 @@ export default function Products() {
       performanceFeature_id: item.performanceFeature_id || item.performanceFeature || '',
       type: item.type,
       status: item.status,
+      it_mfg: item.it_mfg || '',
+      segment: item.segment || '',
+      sbu_name: item.sbu_name || '',
+      grp_name: item.grp_name || '',
+      grp_sbu: item.grp_sbu || '',
+      coid: item.coid || '',
     }
 
     // call deleteProduct with id and payload
@@ -329,6 +359,82 @@ export default function Products() {
                     setFormData((f) => ({ ...f, type: e.target.value }))
                   }
                   required
+                />
+              </div>
+            </div>
+
+            {/* New Fields Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="it_mfg">IT MFG</Label>
+                <Input
+                  id="it_mfg"
+                  value={formData.it_mfg || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, it_mfg: e.target.value }))
+                  }
+                  placeholder="Enter IT MFG"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="segment">Segment</Label>
+                <Input
+                  id="segment"
+                  value={formData.segment || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, segment: e.target.value }))
+                  }
+                  placeholder="Enter Segment"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="sbu_name">SBU Name</Label>
+                <Input
+                  id="sbu_name"
+                  value={formData.sbu_name || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, sbu_name: e.target.value }))
+                  }
+                  placeholder="Enter SBU Name"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="grp_name">GRP Name</Label>
+                <Input
+                  id="grp_name"
+                  value={formData.grp_name || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, grp_name: e.target.value }))
+                  }
+                  placeholder="Enter GRP Name"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="grp_sbu">GRP SBU</Label>
+                <Input
+                  id="grp_sbu"
+                  value={formData.grp_sbu || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, grp_sbu: e.target.value }))
+                  }
+                  placeholder="Enter GRP SBU"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <Label htmlFor="coid">CoID</Label>
+                <Input
+                  id="coid"
+                  value={formData.coid || ''}
+                  onChange={(e) =>
+                    setFormData((f) => ({ ...f, coid: e.target.value }))
+                  }
+                  placeholder="Enter CoID"
                 />
               </div>
             </div>

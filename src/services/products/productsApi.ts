@@ -39,6 +39,15 @@ export interface Product {
   
   type: string
   status: boolean
+  
+  // Additional product fields
+  it_mfg?: string
+  segment?: string
+  sbu_name?: string
+  grp_name?: string
+  grp_sbu?: string
+  coid?: string
+  
   createdAt: string
   updatedAt: string
 }
@@ -54,6 +63,14 @@ export type ProductPayload = {
   performanceFeature_id: string
   type: string
   status: boolean
+  
+  // Additional product fields
+  it_mfg?: string
+  segment?: string
+  sbu_name?: string
+  grp_name?: string
+  grp_sbu?: string
+  coid?: string
 }
 
 /**
