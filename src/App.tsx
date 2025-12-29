@@ -24,12 +24,13 @@ import AdminCompanyProfiles from "./pages/admin/AdminCompanyProfiles";
 import FormSubmissions from "./pages/admin/FormSubmissions";
 import ProductEmailAnalytics from "./pages/admin/ProductEmailAnalytics";
 import Certificates from "./pages/admin/Certificates";
+import TopProducts from "./pages/admin/TopProducts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (previously cacheTime)
       retry: 2,
       retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       refetchOnWindowFocus: false,
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="certifications" element={<Certifications />} />
             <Route path="product-categories" element={<ProductCategories />} />
             <Route path="products" element={<Products />} />
+            <Route path="top-products" element={<TopProducts />} />
             <Route path="articles" element={<Articles />} />
             <Route path="careers" element={<Careers />} />
             <Route path="applications" element={<Applications />} />

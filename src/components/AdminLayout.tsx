@@ -19,7 +19,8 @@ import {
   Menu,
   X,
   ClipboardList,
-  Mail
+  Mail,
+  Star
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -41,6 +42,7 @@ const AdminLayout = () => {
     // { path: '/admin/certifications', icon: Award, label: 'Certifications' },
     // { path: '/admin/product-categories', icon: FolderTree, label: 'Product Categories' },
     { path: '/admin/products', icon: Package, label: 'Products' },
+    { path: '/admin/top-products', icon: Star, label: 'Top 10 Products' },
     { path: '/admin/articles', icon: FileText, label: 'Articles' },
     { path: '/admin/careers', icon: Briefcase, label: 'Careers' },
     { path: '/admin/form-submissions', icon: ClipboardList, label: 'Form Submissions' },
