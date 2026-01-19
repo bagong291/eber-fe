@@ -25,6 +25,7 @@ import FormSubmissions from "./pages/admin/FormSubmissions";
 import ProductEmailAnalytics from "./pages/admin/ProductEmailAnalytics";
 import Certificates from "./pages/admin/Certificates";
 import TopProducts from "./pages/admin/TopProducts";
+import CompanyTopProducts from "./pages/admin/CompanyTopProducts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="product-categories" element={<ProductCategories />} />
             <Route path="products" element={<Products />} />
             <Route path="top-products" element={<TopProducts />} />
+            <Route path="company-top-products" element={<CompanyTopProducts />} />
             <Route path="articles" element={<Articles />} />
             <Route path="careers" element={<Careers />} />
             <Route path="applications" element={<Applications />} />
