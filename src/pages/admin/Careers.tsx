@@ -70,7 +70,7 @@ const Careers = () => {
   const [meta, setMeta] = useState<{ page: number; pageSize: number; total: number }>({ page: 1, pageSize: 10, total: 0 })
 
   const columns = [
-    { key: 'id' as keyof Career, label: 'id' },
+    { key: 'rowNumber' as any, label: 'No' },
     { key: 'position' as keyof Career, label: 'Position' },
     { key: 'location' as keyof Career, label: 'Location' },
     { key: 'type' as keyof Career, label: 'Type' },
@@ -223,7 +223,11 @@ const Careers = () => {
         isLoading={isTableLoading}
       />
       <DataTable
-        data={careers.map(career => ({ ...career, id: String(career.id) }))}
+        data={careers.map((career, index) => ({ 
+          ...career, 
+          id: String(career.id),
+          rowNumber: (meta.page - 1) * meta.pageSize + index + 1 
+        }))}
         columns={columns}
         onAdd={openAddDialog}
         onEdit={item => { openEditDialog({ ...item, id: Number(item.id) } as Career) }}

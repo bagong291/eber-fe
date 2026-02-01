@@ -97,8 +97,8 @@ export default function Articles() {
     ? articles
     : articles.filter(a => a.group === selectedGroup)
 
-  const columns = [
-    { key: 'id' as const, label: 'ID' },
+  const columns: any = [
+    { key: 'rowNumber' as any, label: 'No' },
     { 
       key: 'title_en' as const, 
       label: 'Title (EN)',
@@ -384,7 +384,11 @@ export default function Articles() {
         isLoading={isTableLoading}
       />
       <DataTable
-        data={articles.map(article => ({ ...article, id: String(article.id) }))}
+        data={articles.map((article, index) => ({ 
+          ...article, 
+          id: String(article.id),
+          rowNumber: (meta.page - 1) * meta.pageSize + index + 1 
+        }))}
         columns={columns}
         onAdd={openAddDialog}
         onEdit={(item) => openEditDialog({ ...item, id: Number(item.id) } as Article)}

@@ -86,8 +86,8 @@ export default function Products() {
     coid: '',
   })
 
-  const columns = [
-    { key: 'id' as const, label: 'ID' },
+  const columns: any = [
+    { key: 'rowNumber' as any, label: 'No' },
     { key: 'code' as const, label: 'Code' },
     { 
       key: 'application_en' as const, 
@@ -300,7 +300,11 @@ export default function Products() {
       />
 
       <DataTable
-        data={products.map(product => ({ ...product, id: String(product.id) }))}
+        data={products.map((product, index) => ({ 
+          ...product, 
+          id: String(product.id),
+          rowNumber: (meta.page - 1) * meta.pageSize + index + 1 
+        }))}
         columns={columns}
         onAdd={openAddDialog}
         onEdit={item => openEditDialog({ ...item, id: Number(item.id) } as Product)}
