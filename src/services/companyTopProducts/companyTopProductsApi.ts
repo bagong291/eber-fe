@@ -18,6 +18,7 @@ export interface CompanyTopProductItem {
   product: {
     id: number
     code: string
+    segment: string
     application_en: string
     application_id: string
     type: string

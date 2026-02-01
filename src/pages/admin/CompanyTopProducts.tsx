@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,6 +51,49 @@ export default function CompanyTopProducts() {
     fetchData()
   }, [])
 
+  // Debounced search effect
+  useEffect(() => {
+    if (!isDialogOpen) return
+    
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        performSearch()
+      } else {
+        setSearchResults([])
+      }
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, isDialogOpen])
+
+  async function performSearch() {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setSearching(true)
+    const res = await listProducts({ search: searchQuery }, 1, 50)
+    setSearching(false)
+
+    if (res.success) {
+      // Filter out products that are already in this company's top 3
+      const existingProductIds = selectedCompany?.topProducts.map(tp => tp.product.id) || []
+      const filtered = res.data.data.filter(p => !existingProductIds.includes(p.id))
+      
+      // Sort by segment for better grouping display
+      const sorted = filtered.sort((a, b) => {
+        const segmentA = a.segment || 'Others'
+        const segmentB = b.segment || 'Others'
+        return segmentA.localeCompare(segmentB)
+      })
+      
+      setSearchResults(sorted)
+    } else {
+      toast({ title: res.message, variant: 'destructive' })
+    }
+  }
+
   async function fetchData() {
     setLoading(true)
     const res = await listCompanyTopProducts()
@@ -62,25 +105,6 @@ export default function CompanyTopProducts() {
     }
   }
 
-  async function handleSearch() {
-    if (!searchQuery.trim()) {
-      setSearchResults([])
-      return
-    }
-
-    setSearching(true)
-    const res = await listProducts({ search: searchQuery }, 1, 20)
-    setSearching(false)
-
-    if (res.success) {
-      // Filter out products that are already in this company's top 3
-      const existingProductIds = selectedCompany?.topProducts.map(tp => tp.product.id) || []
-      const filtered = res.data.data.filter(p => !existingProductIds.includes(p.id))
-      setSearchResults(filtered)
-    } else {
-      toast({ title: res.message, variant: 'destructive' })
-    }
-  }
 
   function openAddDialog(company: CompanyTopProductGroup) {
     if (company.topProducts.length >= 3) {
@@ -211,7 +235,7 @@ export default function CompanyTopProducts() {
                         {/* Product Info */}
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-900 truncate">
-                            {item.product.code}
+                            {item.product.segment || item.product.code}
                           </h3>
                           <p className="text-sm text-gray-600 truncate">
                             {item.product.application_en || item.product.type}
@@ -298,11 +322,11 @@ export default function CompanyTopProducts() {
                   id="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by product code or name..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search by segment, code, or name..."
+                  onKeyPress={(e) => e.key === 'Enter' && performSearch()}
                 />
                 <Button
-                  onClick={handleSearch}
+                  onClick={performSearch}
                   disabled={isSearching}
                   variant="outline"
                 >
@@ -317,34 +341,58 @@ export default function CompanyTopProducts() {
                 <Spinner />
               </div>
             ) : searchResults.length > 0 ? (
-              <div className="border rounded-lg max-h-80 overflow-y-auto">
-                <div className="divide-y">
-                  {searchResults.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => setSelectedProduct(product)}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                        selectedProduct?.id === product.id
-                          ? 'bg-purple-50 border-l-4 border-purple-600'
-                          : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {product.code}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {product.application_en || product.type}
-                          </p>
-                        </div>
-                        {selectedProduct?.id === product.id && (
-                          <div className="text-purple-600 font-semibold">✓ Selected</div>
-                        )}
+              <div className="border rounded-lg max-h-96 overflow-y-auto">
+                {(() => {
+                  // Group products by segment
+                  const grouped = searchResults.reduce((acc, product) => {
+                    const segment = product.segment || 'Others'
+                    if (!acc[segment]) {
+                      acc[segment] = []
+                    }
+                    acc[segment].push(product)
+                    return acc
+                  }, {} as Record<string, Product[]>)
+
+                  return Object.entries(grouped).map(([segment, products]) => (
+                    <div key={segment} className="border-b last:border-b-0">
+                      {/* Segment Header */}
+                      <div className="bg-gray-100 px-4 py-2 font-semibold text-sm text-gray-700 sticky top-0">
+                        {segment} ({products.length})
+                      </div>
+                      {/* Products in this segment */}
+                      <div className="divide-y">
+                        {products.map((product) => (
+                          <div
+                            key={product.id}
+                            onClick={() => setSelectedProduct(product)}
+                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                              selectedProduct?.id === product.id
+                                ? 'bg-purple-50 border-l-4 border-purple-600'
+                                : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">
+                                  {product.segment || product.code}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  {product.application_en || product.type}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Code: {product.code}
+                                </p>
+                              </div>
+                              {selectedProduct?.id === product.id && (
+                                <div className="text-purple-600 font-semibold ml-2">✓</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                })()}
               </div>
             ) : searchQuery && !isSearching ? (
               <div className="text-center py-8 text-gray-400">
@@ -358,7 +406,7 @@ export default function CompanyTopProducts() {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-semibold text-green-900 mb-2">Selected Product:</h4>
                 <div className="text-sm text-green-800">
-                  <div><strong>Code:</strong> {selectedProduct.code}</div>
+                  <div><strong>Segment:</strong> {selectedProduct.segment || selectedProduct.code}</div>
                   <div><strong>Type:</strong> {selectedProduct.type}</div>
                 </div>
               </div>
