@@ -51,7 +51,11 @@ export default function Products() {
   const [filterOptions, setFilterOptions] = useState<{
     types: string[]
     applications: string[]
-  }>({ types: [], applications: [] })
+    segments: string[]
+    grpSbus: string[]
+    sbuNames: string[]
+    grpNames: string[]
+  }>({ types: [], applications: [], segments: [], grpSbus: [], sbuNames: [], grpNames: [] })
   const [meta, setMeta] = useState<{
     page: number
     total: number
@@ -60,6 +64,10 @@ export default function Products() {
 
   const [typeFilter, setTypeFilter] = useState<string[]>([])
   const [appFilter, setAppFilter] = useState<string[]>([])
+  const [segmentFilter, setSegmentFilter] = useState<string[]>([])
+  const [grpSbuFilter, setGrpSbuFilter] = useState<string[]>([])
+  const [sbuNameFilter, setSbuNameFilter] = useState<string[]>([])
+  const [grpNameFilter, setGrpNameFilter] = useState<string[]>([])
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 400)
@@ -137,7 +145,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchProducts()
-  }, [debouncedSearch, meta.page, meta.pageSize, typeFilter, appFilter, statusFilter])
+  }, [debouncedSearch, meta.page, meta.pageSize, typeFilter, appFilter, segmentFilter, grpSbuFilter, sbuNameFilter, grpNameFilter, statusFilter])
 
   async function fetchProducts() {
     setTableLoading(true)
@@ -145,6 +153,10 @@ export default function Products() {
     if (debouncedSearch) filter.search = debouncedSearch
     if (typeFilter.length) filter.type = typeFilter
     if (appFilter.length) filter.application = appFilter
+    if (segmentFilter.length) filter.segment = segmentFilter
+    if (grpSbuFilter.length) filter.grp_sbu = grpSbuFilter
+    if (sbuNameFilter.length) filter.sbu_name = sbuNameFilter
+    if (grpNameFilter.length) filter.grp_name = grpNameFilter
     if (statusFilter !== 'all') filter.status = statusFilter === 'active' ? 'true' : 'false'
     
     const res = await listProducts(filter, meta.page, meta.pageSize)
@@ -278,6 +290,10 @@ export default function Products() {
   const handleClearAllFilters = () => {
     setTypeFilter([])
     setAppFilter([])
+    setSegmentFilter([])
+    setGrpSbuFilter([])
+    setSbuNameFilter([])
+    setGrpNameFilter([])
     setStatusFilter('all')
     setSearch('')
   }
@@ -289,10 +305,18 @@ export default function Products() {
         filterOptions={filterOptions}
         selectedTypes={typeFilter}
         selectedApplications={appFilter}
+        selectedSegments={segmentFilter}
+        selectedGrpSbus={grpSbuFilter}
+        selectedSbuNames={sbuNameFilter}
+        selectedGrpNames={grpNameFilter}
         statusFilter={statusFilter}
         search={search}
         onTypeChange={setTypeFilter}
         onApplicationChange={setAppFilter}
+        onSegmentChange={setSegmentFilter}
+        onGrpSbuChange={setGrpSbuFilter}
+        onSbuNameChange={setSbuNameFilter}
+        onGrpNameChange={setGrpNameFilter}
         onStatusChange={setStatusFilter}
         onSearchChange={setSearch}
         onClearAll={handleClearAllFilters}

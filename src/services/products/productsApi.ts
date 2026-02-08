@@ -81,6 +81,10 @@ export interface ProductsListData {
   filter_feature: {
     types: string[]
     applications: string[]
+    segments: string[]
+    grpSbus: string[]
+    sbuNames: string[]
+    grpNames: string[]
   }
   meta: {
     page: number
@@ -97,6 +101,10 @@ export interface ProductFilter {
   code?: string
   type?: string[]
   application?: string[]
+  segment?: string[]
+  grp_sbu?: string[]
+  sbu_name?: string[]
+  grp_name?: string[]
 }
 
 /**
@@ -147,6 +155,10 @@ export function listProducts(
     code: filter.code,
     type: filter.type,
     application: filter.application,
+    segment: filter.segment,
+    grp_sbu: filter.grp_sbu,
+    sbu_name: filter.sbu_name,
+    grp_name: filter.grp_name,
   }
 
   // Build clean query string (arrays will be comma-separated)

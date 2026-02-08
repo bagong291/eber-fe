@@ -16,13 +16,25 @@ interface ProductFiltersProps {
   filterOptions: {
     types: string[]
     applications: string[]
+    segments: string[]
+    grpSbus: string[]
+    sbuNames: string[]
+    grpNames: string[]
   }
   selectedTypes: string[]
   selectedApplications: string[]
+  selectedSegments: string[]
+  selectedGrpSbus: string[]
+  selectedSbuNames: string[]
+  selectedGrpNames: string[]
   statusFilter: 'all' | 'active' | 'inactive'
   search: string
   onTypeChange: (types: string[]) => void
   onApplicationChange: (applications: string[]) => void
+  onSegmentChange: (segments: string[]) => void
+  onGrpSbuChange: (grpSbus: string[]) => void
+  onSbuNameChange: (sbuNames: string[]) => void
+  onGrpNameChange: (grpNames: string[]) => void
   onStatusChange: (status: 'all' | 'active' | 'inactive') => void
   onSearchChange: (search: string) => void
   onClearAll: () => void
@@ -33,10 +45,18 @@ export default function ProductFilters({
   filterOptions,
   selectedTypes,
   selectedApplications,
+  selectedSegments,
+  selectedGrpSbus,
+  selectedSbuNames,
+  selectedGrpNames,
   statusFilter,
   search,
   onTypeChange,
   onApplicationChange,
+  onSegmentChange,
+  onGrpSbuChange,
+  onSbuNameChange,
+  onGrpNameChange,
   onStatusChange,
   onSearchChange,
   onClearAll,
@@ -45,8 +65,37 @@ export default function ProductFilters({
   // Convert filter options to the format expected by the multi-select components
   const typeOptions = filterOptions.types.map(type => ({ value: type, label: type }))
   const applicationOptions = filterOptions.applications.map(app => ({ value: app, label: app }))
+  const segmentOptions = filterOptions.segments.map(seg => ({ value: seg, label: seg }))
+  const grpSbuOptions = filterOptions.grpSbus.map(grp => ({ value: grp, label: grp }))
+  const sbuNameOptions = filterOptions.sbuNames.map(sbu => ({ value: sbu, label: sbu }))
+  const grpNameOptions = filterOptions.grpNames.map(grp => ({ value: grp, label: grp }))
 
-  const hasActiveFilters = search.trim() !== '' || selectedTypes.length > 0 || selectedApplications.length > 0 || statusFilter !== 'all'
+  const hasActiveFilters = search.trim() !== '' || selectedTypes.length > 0 || selectedApplications.length > 0 || selectedSegments.length > 0 || selectedGrpSbus.length > 0 || selectedSbuNames.length > 0 || selectedGrpNames.length > 0 || statusFilter !== 'all'
+
+  // Helper functions to toggle selection
+  const handleTypeSelect = (type: string) => {
+    onTypeChange(selectedTypes.filter(t => t !== type))
+  }
+
+  const handleApplicationSelect = (application: string) => {
+    onApplicationChange(selectedApplications.filter(a => a !== application))
+  }
+
+  const handleSegmentSelect = (segment: string) => {
+    onSegmentChange(selectedSegments.filter(s => s !== segment))
+  }
+
+  const handleGrpSbuSelect = (grpSbu: string) => {
+    onGrpSbuChange(selectedGrpSbus.filter(g => g !== grpSbu))
+  }
+
+  const handleSbuNameSelect = (sbuName: string) => {
+    onSbuNameChange(selectedSbuNames.filter(s => s !== sbuName))
+  }
+
+  const handleGrpNameSelect = (grpName: string) => {
+    onGrpNameChange(selectedGrpNames.filter(g => g !== grpName))
+  }
 
   return (
     <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
@@ -142,6 +191,114 @@ export default function ProductFilters({
           </Select>
         </div>
 
+        {/* Segment Filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Segment</label>
+          {segmentOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={segmentOptions}
+              selectedValues={selectedSegments}
+              onSelectionChange={onSegmentChange}
+              placeholder={isLoading ? "Loading..." : "Select Segments"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={segmentOptions}
+              selectedValues={selectedSegments}
+              onSelectionChange={onSegmentChange}
+              placeholder={isLoading ? "Loading..." : "Select Segments"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
+        </div>
+
+        {/* Group SBU Filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Group SBU</label>
+          {grpSbuOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={grpSbuOptions}
+              selectedValues={selectedGrpSbus}
+              onSelectionChange={onGrpSbuChange}
+              placeholder={isLoading ? "Loading..." : "Select Group SBU"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={grpSbuOptions}
+              selectedValues={selectedGrpSbus}
+              onSelectionChange={onGrpSbuChange}
+              placeholder={isLoading ? "Loading..." : "Select Group SBU"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
+        </div>
+
+        {/* SBU Name Filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">SBU Name</label>
+          {sbuNameOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={sbuNameOptions}
+              selectedValues={selectedSbuNames}
+              onSelectionChange={onSbuNameChange}
+              placeholder={isLoading ? "Loading..." : "Select SBU Name"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={sbuNameOptions}
+              selectedValues={selectedSbuNames}
+              onSelectionChange={onSbuNameChange}
+              placeholder={isLoading ? "Loading..." : "Select SBU Name"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
+        </div>
+
+        {/* Group Name Filter */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-600">Group Name</label>
+          {grpNameOptions.length > 100 ? (
+            <VirtualizedMultiSelect
+              options={grpNameOptions}
+              selectedValues={selectedGrpNames}
+              onSelectionChange={onGrpNameChange}
+              placeholder={isLoading ? "Loading..." : "Select Group Name"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight={200}
+              virtualizationThreshold={50}
+            />
+          ) : (
+            <SearchableMultiSelect
+              options={grpNameOptions}
+              selectedValues={selectedGrpNames}
+              onSelectionChange={onGrpNameChange}
+              placeholder={isLoading ? "Loading..." : "Select Group Name"}
+              disabled={isLoading}
+              className="w-48"
+              maxHeight="200px"
+            />
+          )}
+        </div>
+
         {hasActiveFilters && (
           <div className="flex items-end">
             <Button
@@ -185,6 +342,42 @@ export default function ProductFilters({
               <X
                 className="h-3 w-3 cursor-pointer hover:text-red-500"
                 onClick={() => handleApplicationSelect(application)}
+              />
+            </Badge>
+          ))}
+          {selectedSegments.map((segment) => (
+            <Badge key={segment} variant="secondary" className="gap-1">
+              Segment: {segment}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-red-500"
+                onClick={() => handleSegmentSelect(segment)}
+              />
+            </Badge>
+          ))}
+          {selectedGrpSbus.map((grpSbu) => (
+            <Badge key={grpSbu} variant="secondary" className="gap-1">
+              Group SBU: {grpSbu}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-red-500"
+                onClick={() => handleGrpSbuSelect(grpSbu)}
+              />
+            </Badge>
+          ))}
+          {selectedSbuNames.map((sbuName) => (
+            <Badge key={sbuName} variant="secondary" className="gap-1">
+              SBU Name: {sbuName}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-red-500"
+                onClick={() => handleSbuNameSelect(sbuName)}
+              />
+            </Badge>
+          ))}
+          {selectedGrpNames.map((grpName) => (
+            <Badge key={grpName} variant="secondary" className="gap-1">
+              Group Name: {grpName}
+              <X
+                className="h-3 w-3 cursor-pointer hover:text-red-500"
+                onClick={() => handleGrpNameSelect(grpName)}
               />
             </Badge>
           ))}
