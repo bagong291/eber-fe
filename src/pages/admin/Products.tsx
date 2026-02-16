@@ -1,14 +1,19 @@
 // src/pages/Products.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   listProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  deleteAllProducts,
+  bulkUploadProducts,
   Product,
   ProductPayload,
   ProductsListData,
 } from '@/services/products/productsApi'
+
+// Feature flag from env
+const ENABLE_DELETE_ALL_PRODUCTS = import.meta.env.VITE_ENABLE_DELETE_ALL_PRODUCTS === 'true'
 import DataTable from '@/components/DataTable'
 import ProductFilters from '@/components/ProductFilters'
 import MultiLanguageInput from '@/components/MultiLanguageInput'
@@ -28,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import WysiwygEditor from '@/components/WysiwygEditor'
+import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { useDebounce } from '@/hooks/use-mobile' // Use debounce hook or implement one
 
@@ -73,6 +78,23 @@ export default function Products() {
   const debouncedSearch = useDebounce(search, 400)
 
   const [isTableLoading, setTableLoading] = useState(false)
+
+  // CSV upload state
+  const [isUploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadResult, setUploadResult] = useState<{
+    success: boolean
+    created: number
+    errors: { row: number; message: string }[]
+  } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Delete all state
+  const [isDeleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false)
+  const [isDeletingAll, setIsDeletingAll] = useState(false)
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState('')
 
   // dialog/form state
   const [isDialogOpen, setDialogOpen] = useState(false)
@@ -298,6 +320,213 @@ export default function Products() {
     setSearch('')
   }
 
+  // CSV Upload handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        toast({ title: 'Please select a valid CSV file', variant: 'destructive' })
+        return
+      }
+      setUploadFile(file)
+      setUploadResult(null)
+    }
+  }
+
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // Escaped quote
+          current += '"'
+          i++
+        } else {
+          inQuotes = !inQuotes
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim())
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    result.push(current.trim())
+    return result
+  }
+
+  const parseCSV = (content: string): ProductPayload[] => {
+    const lines = content.split('\n').filter(line => line.trim())
+    if (lines.length < 2) {
+      throw new Error('CSV file is empty or has no data rows')
+    }
+
+    const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, ''))
+    
+    // Map CSV columns to database fields (case-insensitive)
+    const columnMap: Record<string, string> = {
+      'it_code': 'code',
+      'it_mfg': 'it_mfg',
+      'segment': 'segment',
+      'sbu_name': 'sbu_name',
+      'grp_name': 'grp_name',
+      'grp_sbu': 'grp_sbu',
+      'coid': 'coid'
+    }
+
+    const products: ProductPayload[] = []
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, ''))
+      
+      if (values.length < 2 || values.every(v => !v.trim())) continue // Skip empty rows
+
+      const product: Partial<ProductPayload> = {
+        status: true,
+        // Default values for required fields
+        application_en: '',
+        application_id: '',
+        performanceFeature_en: '',
+        performanceFeature_id: '',
+        type: '',
+      }
+
+      // Map CSV columns to product fields
+      headers.forEach((header, index) => {
+        const key = header.toLowerCase().replace(/\s+/g, '_')
+        const mappedKey = columnMap[key]
+        if (mappedKey && values[index] !== undefined) {
+          (product as Record<string, string>)[mappedKey] = values[index]
+        }
+      })
+
+      // Set type from segment if available, otherwise from grp_sbu
+      if (!product.type) {
+        product.type = product.segment || product.grp_sbu || 'Coating'
+      }
+
+      // Ensure code is set
+      if (!product.code) {
+        throw new Error(`Row ${i}: Product code (It_Code) is required`)
+      }
+
+      products.push(product as ProductPayload)
+    }
+
+    return products
+  }
+
+  const handleUpload = async () => {
+    if (!uploadFile) {
+      toast({ title: 'Please select a CSV file', variant: 'destructive' })
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const content = await uploadFile.text()
+      const products = parseCSV(content)
+
+      if (products.length === 0) {
+        toast({ title: 'No valid products found in CSV', variant: 'destructive' })
+        setIsUploading(false)
+        return
+      }
+
+      // Simulate progress
+      setUploadProgress(30)
+      
+      const result = await bulkUploadProducts(products)
+      
+      setUploadProgress(100)
+      
+      if (result.success) {
+        setUploadResult({
+          success: true,
+          created: result.data?.created || 0,
+          errors: result.data?.errors || []
+        })
+        toast({ 
+          title: `Successfully created ${result.data?.created || 0} products`,
+          variant: 'default'
+        })
+        // Refresh product list
+        await fetchProducts()
+      } else {
+        setUploadResult({
+          success: false,
+          created: 0,
+          errors: [{ row: 0, message: result.message }]
+        })
+        toast({ title: result.message, variant: 'destructive' })
+      }
+    } catch (error) {
+      setUploadResult({
+        success: false,
+        created: 0,
+        errors: [{ row: 0, message: error instanceof Error ? error.message : 'Unknown error' }]
+      })
+      toast({ 
+        title: error instanceof Error ? error.message : 'Failed to process CSV', 
+        variant: 'destructive' 
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const resetUpload = () => {
+    setUploadFile(null)
+    setUploadResult(null)
+    setUploadProgress(0)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const openUploadDialog = () => {
+    setUploadDialogOpen(true)
+    resetUpload()
+  }
+
+  // Delete all handlers
+  const handleDeleteAll = async () => {
+    if (deleteAllConfirmText !== 'DELETE ALL') {
+      toast({ title: 'Please type "DELETE ALL" to confirm', variant: 'destructive' })
+      return
+    }
+
+    setIsDeletingAll(true)
+    try {
+      const result = await deleteAllProducts()
+      if (result.success) {
+        toast({ 
+          title: `Successfully deleted ${result.data?.deleted || 0} products`,
+          variant: 'default'
+        })
+        setDeleteAllDialogOpen(false)
+        setDeleteAllConfirmText('')
+        await fetchProducts()
+      } else {
+        toast({ title: result.message, variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ 
+        title: error instanceof Error ? error.message : 'Failed to delete all products', 
+        variant: 'destructive' 
+      })
+    } finally {
+      setIsDeletingAll(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Filter Section */}
@@ -323,21 +552,45 @@ export default function Products() {
         isLoading={isTableLoading}
       />
 
-      <DataTable
-        data={products.map((product, index) => ({ 
-          ...product, 
-          id: String(product.id),
-          rowNumber: (meta.page - 1) * meta.pageSize + index + 1 
-        }))}
-        columns={columns}
-        onAdd={openAddDialog}
-        onEdit={item => openEditDialog({ ...item, id: Number(item.id) } as Product)}
-        onDelete={id => handleDelete({ ...products.find(p => String(p.id) === id)!, id: Number(id) } as Product)}
-        title="Products"
-        searchPlaceholder="Search products..."
-        searchValue={search}
-        onSearchChange={setSearch}
-      />
+      <div className="flex justify-between items-center">
+        <DataTable
+          data={products.map((product, index) => ({ 
+            ...product, 
+            id: String(product.id),
+            rowNumber: (meta.page - 1) * meta.pageSize + index + 1 
+          }))}
+          columns={columns}
+          onAdd={openAddDialog}
+          onEdit={item => openEditDialog({ ...item, id: Number(item.id) } as Product)}
+          onDelete={id => handleDelete({ ...products.find(p => String(p.id) === id)!, id: Number(id) } as Product)}
+          title="Products"
+          searchPlaceholder="Search products..."
+          searchValue={search}
+          onSearchChange={setSearch}
+        />
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-2">
+        {ENABLE_DELETE_ALL_PRODUCTS && (
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteAllDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete All
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          onClick={openUploadDialog}
+          className="flex items-center gap-2"
+        >
+          <Upload className="w-4 h-4" />
+          Upload CSV
+        </Button>
+      </div>
       {/* Pagination Controls - bottom, centered, modern UI */}
       <div className="flex flex-col items-center justify-center mt-6">
         <div className="flex items-center space-x-4 bg-white rounded-lg shadow px-4 py-2">
@@ -546,6 +799,209 @@ export default function Products() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* CSV Upload Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5" />
+              Upload Products from CSV
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 p-4">
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
+              <p className="font-medium text-blue-900 mb-2">CSV Format Requirements:</p>
+              <ul className="list-disc list-inside text-blue-800 space-y-1">
+                <li>Headers: It_Code, It_Mfg, Segment, SBU_Name, Grp_Name, Grp_SBU, CoID</li>
+                <li>It_Code is required for each product</li>
+                <li>Type will be auto-generated from Segment or Grp_SBU</li>
+              </ul>
+            </div>
+
+            {/* File Input */}
+            {!uploadResult && (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="csv-upload"
+                  />
+                  <label
+                    htmlFor="csv-upload"
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {uploadFile ? uploadFile.name : 'Click to select CSV file'}
+                    </span>
+                    {uploadFile && (
+                      <span className="text-xs text-gray-500">
+                        {(uploadFile.size / 1024).toFixed(1)} KB
+                      </span>
+                    )}
+                  </label>
+                </div>
+
+                {uploadFile && !isUploading && (
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetUpload}
+                      className="text-gray-500"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                    <Button onClick={handleUpload}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Products
+                    </Button>
+                  </div>
+                )}
+
+                {/* Progress Bar */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Uploading...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Results */}
+            {uploadResult && (
+              <div className="space-y-4">
+                <div className={`rounded-lg p-4 ${uploadResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {uploadResult.success ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                    )}
+                    <span className={`font-medium ${uploadResult.success ? 'text-green-900' : 'text-red-900'}`}>
+                      {uploadResult.success ? 'Upload Successful' : 'Upload Failed'}
+                    </span>
+                  </div>
+                  <p className={`text-sm ${uploadResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                    {uploadResult.success
+                      ? `Successfully created ${uploadResult.created} products.`
+                      : 'There were errors during upload.'}
+                  </p>
+                </div>
+
+                {uploadResult.errors.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Errors:</p>
+                    <ul className="text-sm text-red-600 space-y-1">
+                      {uploadResult.errors.map((error, index) => (
+                        <li key={index}>Row {error.row}: {error.message}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setUploadDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+                  {uploadResult.success && (
+                    <Button onClick={resetUpload}>
+                      Upload Another File
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      {ENABLE_DELETE_ALL_PRODUCTS && (
+        <Dialog open={isDeleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="w-5 h-5" />
+                Delete All Products
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800 font-medium mb-2">Warning: This action cannot be undone!</p>
+                <p className="text-red-700 text-sm">
+                  You are about to delete all {meta.total} products from the database. 
+                  This will permanently remove all product data.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-delete" className="text-sm font-medium">
+                  Type <span className="font-bold">DELETE ALL</span> to confirm:
+                </Label>
+                <Input
+                  id="confirm-delete"
+                  value={deleteAllConfirmText}
+                  onChange={(e) => setDeleteAllConfirmText(e.target.value)}
+                  placeholder="DELETE ALL"
+                  className="border-red-300 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteAllDialogOpen(false)
+                    setDeleteAllConfirmText('')
+                  }}
+                  disabled={isDeletingAll}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAll}
+                  disabled={isDeletingAll || deleteAllConfirmText !== 'DELETE ALL'}
+                >
+                  {isDeletingAll ? (
+                    <>
+                      <Spinner />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete All Products
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

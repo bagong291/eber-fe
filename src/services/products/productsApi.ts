@@ -217,3 +217,60 @@ export async function deleteProduct(
     return { data: null, success: false, message }
   }
 }
+
+/**
+ * Bulk upload products from CSV
+ */
+export async function bulkUploadProducts(
+  products: ProductPayload[]
+): Promise<ApiResponse<{ created: number; errors: { row: number; message: string }[] }>> {
+  try {
+    const response = await apiClient.post<ApiWrapper<{ created: number; errors: { row: number; message: string }[] }>>(
+      '/products/bulk-upload',
+      { products }
+    )
+    return {
+      data: response.data.data,
+      success: response.data.status === 'success',
+      message: response.data.status === 'success' ? 'Upload completed' : 'Upload failed',
+    }
+  } catch (err) {
+    let message = 'Network or server error'
+    if ((err as AxiosError).isAxiosError) {
+      const axiosErr = err as AxiosError<{ message?: string }>
+      message =
+        axiosErr.response?.data?.message ??
+        axiosErr.response?.statusText ??
+        axiosErr.message
+    } else if (err instanceof Error) {
+      message = err.message
+    }
+    return { data: { created: 0, errors: [] }, success: false, message }
+  }
+}
+
+/**
+ * Delete all products
+ */
+export async function deleteAllProducts(): Promise<ApiResponse<{ deleted: number }>> {
+  try {
+    const response = await apiClient.delete<ApiWrapper<{ deleted: number }>>('/products')
+    return {
+      data: response.data.data,
+      success: response.data.status === 'success',
+      message: response.data.status === 'success' ? 'All products deleted' : 'Failed to delete products',
+    }
+  } catch (err) {
+    let message = 'Network or server error'
+    if ((err as AxiosError).isAxiosError) {
+      const axiosErr = err as AxiosError<{ message?: string }>
+      message =
+        axiosErr.response?.data?.message ??
+        axiosErr.response?.statusText ??
+        axiosErr.message
+    } else if (err instanceof Error) {
+      message = err.message
+    }
+    return { data: { deleted: 0 }, success: false, message }
+  }
+}
